@@ -1,6 +1,6 @@
-#!/bin/zsh
+#!/bin/sh
 set -eu
-cd "${0:A:h}/.."
+cd "$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
 iconset=".build/brand/Act.iconset"
 mkdir -p "$iconset"
 for size in 16 32 128 256 512; do
