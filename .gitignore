@@ -1,0 +1,8 @@
+.build/
+.swiftpm/
+.env
+.env.*
+!.env.example
+.scratch/
+.DS_Store
+*.xcuserstate
