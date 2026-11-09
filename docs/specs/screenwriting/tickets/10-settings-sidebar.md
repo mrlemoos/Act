@@ -6,7 +6,7 @@ Blocked by: none
 
 ## Delivered behaviour
 
-Writing settings opens in a collapsible right sidebar with examples that update as preferences change.
+Writing settings opens in a collapsible 320-point right sidebar. Typography, Scene headings and Dialogue groups place a dedicated live preview beneath every option. Font, size, spacing, heading weight and dialogue continuations update their examples as preferences change. The controls and previews scroll together; the close control remains visible.
 
 ## What to build
 
@@ -47,3 +47,7 @@ No core parsing, persistence or inference logic changed. This UI revision was ch
 
 - Changing Fountain source or PDF layout.
 - Per-document style preferences or new typography controls.
+
+## Per-option preview revision
+
+Native app build and `swift test` pass. The presentation regression renders each dedicated preview before and after changing its observed preference and verifies a visible update. Offscreen workspace renders cover Courier defaults at 1280 points, Menlo 14 at 1280 and 820 points, and closing the panel. The rendering harness confirms unchanged Fountain source and uses isolated preferences. Screenshots remain under `.scratch/settings-sidebar-preview/`. Desktop interaction and dark appearance were not manually rechecked for this revision.

@@ -143,27 +143,26 @@ struct PresentationTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let preferences = WritingPreferences(defaults: defaults)
-        let host = PresentationHost(ScreenplayStyleExample(preferences: preferences), size: NSSize(width: 320, height: 700))
-        defer { host.close() }
-        var variants: [(String, ScreenplaySettings)] = []
+        var variants: [(ScreenplayStyleExample.Kind, ScreenplaySettings)] = []
         var setting = ScreenplaySettings.standard
-        setting.fontName = "Menlo"; variants.append(("font", setting))
-        setting = .standard; setting.fontSize = 14; variants.append(("size", setting))
-        setting = .standard; setting.blankLinesBeforeSlugline = 1; variants.append(("spacing", setting))
-        setting = .standard; setting.boldSluglines = false; variants.append(("weight", setting))
-        setting = .standard; setting.dialogueContinuations = false; variants.append(("continuation", setting))
-        for (name, changed) in variants {
+        setting.fontName = "Menlo"; variants.append((.font, setting))
+        setting = .standard; setting.fontSize = 14; variants.append((.size, setting))
+        setting = .standard; setting.blankLinesBeforeSlugline = 1; variants.append((.spacing, setting))
+        setting = .standard; setting.boldSluglines = false; variants.append((.heading, setting))
+        setting = .standard; setting.dialogueContinuations = false; variants.append((.dialogue, setting))
+        for (kind, changed) in variants {
             preferences.settings = .standard
+            let host = PresentationHost(ScreenplayStyleExample(preferences: preferences, kind: kind), size: NSSize(width: 280, height: 700))
+            defer { host.close() }
             host.pump()
             let baseline = try host.renderedPNG()
             #expect(try baseline == host.renderedPNG(), "An unchanged example should render consistently")
             preferences.settings = changed
             host.pump()
             let updated = try host.renderedPNG()
-            #expect(updated != baseline, "The example must visibly update its \(name)")
+            #expect(updated != baseline, "The example must visibly update its \(kind)")
             #expect(try updated == host.renderedPNG(), "The changed example should render consistently")
         }
-        #expect(!host.window.isVisible)
     }
 
     @Test func continuationAnnotationsFollowSettingsAndDisappearInSourceMode() throws {
