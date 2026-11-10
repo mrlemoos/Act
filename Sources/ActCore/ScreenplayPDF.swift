@@ -11,7 +11,7 @@ public enum ScreenplayPDFError: LocalizedError {
 public struct ScreenplayPDFLine: Sendable {
     public let text: String
     public let x: CGFloat
-    /// Distance from the top edge of a US Letter page to the text baseline.
+    /// Distance from the top edge of the page to the text baseline.
     public let baseline: CGFloat
     public let bold: Bool
 }
@@ -24,7 +24,6 @@ public struct ScreenplayPDFPage: Sendable {
 public enum ScreenplayPDF {
     public static let pageSize = CGSize(width: 612, height: 792)
     private static let top: CGFloat = 72
-    private static let bottom: CGFloat = 720
 
     @MainActor
     public static func export(source: String, to url: URL, settings: ScreenplaySettings = .standard) throws {
@@ -35,7 +34,8 @@ public enum ScreenplayPDF {
     public static func data(source: String, settings: ScreenplaySettings = .standard) throws -> Data {
         let settings = settings.validated
         let output = NSMutableData()
-        var mediaBox = CGRect(origin: .zero, size: pageSize)
+        let size = ScreenplayPaper.read(from: source).size
+        var mediaBox = CGRect(origin: .zero, size: size)
         guard let consumer = CGDataConsumer(data: output),
               let context = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else {
             throw ScreenplayPDFError.cannotCreatePDF
@@ -46,12 +46,12 @@ public enum ScreenplayPDF {
             if !page.isTitlePage {
                 bodyPage += 1
                 if bodyPage > 1 {
-                    draw("\(bodyPage).", x: 540 - textWidth("\(bodyPage).", bold: false, settings: settings),
-                         baseline: 36, bold: false, settings: settings, in: context)
+                    draw("\(bodyPage).", x: size.width - 72 - textWidth("\(bodyPage).", bold: false, settings: settings),
+                         baseline: 36, bold: false, settings: settings, pageHeight: size.height, in: context)
                 }
             }
             for line in page.lines {
-                draw(line.text, x: line.x, baseline: line.baseline, bold: line.bold, settings: settings, in: context)
+                draw(line.text, x: line.x, baseline: line.baseline, bold: line.bold, settings: settings, pageHeight: size.height, in: context)
             }
             context.endPDFPage()
         }
@@ -63,6 +63,10 @@ public enum ScreenplayPDF {
     public static func layout(source: String, settings: ScreenplaySettings = .standard) -> [ScreenplayPDFPage] {
         let settings = settings.validated
         let screenplay = FountainParser.parse(source)
+        let size = ScreenplayPaper.read(from: source).size
+        let bottom = size.height - 72
+        let right = size.width - 72
+        let bodyWidth = right - 108
         let fontSize = settings.fontSize
         let lineHeight = CGFloat(max(12, fontSize))
         let characterCues = ScreenplayPresentation.characterCues(in: screenplay, settings: settings)
@@ -70,37 +74,42 @@ public enum ScreenplayPDF {
             visibleText(characterCues[element.range.location] ?? FountainParser.displayText(element))
         }
         var pages: [ScreenplayPDFPage] = []
-        let titleElements = screenplay.elements.filter { $0.kind == .titlePage }
-        if !titleElements.isEmpty {
+        let fields = FountainTitleField.read(from: source).filter { $0.key != "paper" && !$0.value.isEmpty }
+        if !fields.isEmpty {
             var titleLines: [ScreenplayPDFLine] = []
-            var y: CGFloat = 252
-            var currentKey = ""
-            var contactStarted = false
-            for element in titleElements {
-                let raw = FountainParser.displayText(element)
-                let split = raw.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
-                if split.count == 2 { currentKey = String(split[0]).lowercased() }
-                let value = visibleText(split.count == 2 ? String(split[1]).trimmingCharacters(in: .whitespaces) : raw)
-                let key = currentKey
-                guard !value.isEmpty else { continue }
-                let isContact = ["contact", "copyright", "draft date"].contains(key)
-                if isContact && !contactStarted {
-                    y = max(y, 636)
-                    contactStarted = true
+            var y: CGFloat = size.height / 3
+            let footerKeys = ["contact", "copyright", "draft date", "notes"]
+            // Field order in the source does not alter conventional title-page placement.
+            let order = ["title", "credit", "author", "authors", "source"]
+            let centred = order.flatMap { key in fields.filter { $0.key == key } }
+            let footer = fields.filter { footerKeys.contains($0.key) }
+            func rows(_ field: FountainTitleField) -> [String] {
+                field.value.components(separatedBy: "\n").flatMap {
+                    let text = visibleText($0)
+                    return text.isEmpty ? [""] : wrapped(text, width: bodyWidth, bold: field.key == "title", settings: settings)
                 }
-                for text in wrapped(value, width: 432, bold: key == "title", settings: settings) {
+            }
+            func append(_ field: FountainTitleField, centred: Bool) {
+                for text in rows(field) {
                     if y > bottom {
                         pages.append(ScreenplayPDFPage(lines: titleLines, isTitlePage: true))
                         titleLines = []
                         y = top
                     }
-                    let width = textWidth(text, bold: key == "title", settings: settings)
-                    titleLines.append(ScreenplayPDFLine(text: text, x: isContact ? 108 : max(108, (612 - width) / 2), baseline: y, bold: key == "title"))
+                    let width = textWidth(text, bold: field.key == "title", settings: settings)
+                    titleLines.append(ScreenplayPDFLine(text: text, x: centred ? max(0, (size.width - width) / 2) : 108,
+                                                       baseline: y, bold: field.key == "title"))
                     y += lineHeight
                 }
                 y += lineHeight
             }
-            pages.append(ScreenplayPDFPage(lines: titleLines, isTitlePage: true))
+            for field in centred { append(field, centred: true) }
+            if !footer.isEmpty {
+                let footerRows = footer.reduce(0) { $0 + rows($1).count } + footer.count - 1
+                y = max(y, bottom - CGFloat(footerRows - 1) * lineHeight)
+                for field in footer { append(field, centred: false) }
+            }
+            if !titleLines.isEmpty { pages.append(ScreenplayPDFPage(lines: titleLines, isTitlePage: true)) }
         }
         var lines: [ScreenplayPDFLine] = []
         var y = top
@@ -131,8 +140,8 @@ public enum ScreenplayPDF {
                         }
                     }
                     let left = column(index..<leftEnd, x: 108)
-                    let right = column(rightStart..<rightEnd, x: 324)
-                    let count = max(left.count, right.count)
+                    let rightColumn = column(rightStart..<rightEnd, x: size.width - 288)
+                    let count = max(left.count, rightColumn.count)
                     let cueRows = max(wrapped(presentationText(element), width: 144, bold: false, settings: settings).count,
                                       wrapped(presentationText(printable[rightStart]), width: 144, bold: false, settings: settings).count)
                     if y + CGFloat(min(count, max(4, cueRows + 2)) - 1) * lineHeight > bottom, !lines.isEmpty { finishPage() }
@@ -143,7 +152,7 @@ public enum ScreenplayPDF {
                         let splitting = count - row > available
                         let countHere = min(count - row, max(1, available - (splitting && settings.dialogueContinuations ? 1 : 0)))
                         for _ in 0..<countHere {
-                            for values in [left, right] where row < values.count {
+                            for values in [left, rightColumn] where row < values.count {
                                 lines.append(ScreenplayPDFLine(text: values[row].0, x: values[row].1, baseline: y, bold: false))
                             }
                             row += 1
@@ -152,12 +161,12 @@ public enum ScreenplayPDF {
                         if row < count {
                             if settings.dialogueContinuations {
                                 if row < left.count { lines.append(ScreenplayPDFLine(text: "(MORE)", x: 144, baseline: min(y, bottom), bold: false)) }
-                                if row < right.count { lines.append(ScreenplayPDFLine(text: "(MORE)", x: 360, baseline: min(y, bottom), bold: false)) }
+                                if row < rightColumn.count { lines.append(ScreenplayPDFLine(text: "(MORE)", x: size.width - 252, baseline: min(y, bottom), bold: false)) }
                             }
                             finishPage()
                             if settings.dialogueContinuations {
                                 var cueHeight = 0
-                                for (start, values, x) in [(index, left, CGFloat(144)), (rightStart, right, CGFloat(360))] where row < values.count {
+                                for (start, values, x) in [(index, left, CGFloat(144)), (rightStart, rightColumn, size.width - 252)] where row < values.count {
                                     let cueLines = wrapped(ScreenplayPresentation.continuationCue(presentationText(printable[start])), width: 144, bold: false, settings: settings)
                                     for (offset, text) in cueLines.enumerated() {
                                         lines.append(ScreenplayPDFLine(text: text, x: x, baseline: y + CGFloat(offset) * lineHeight, bold: false))
@@ -231,7 +240,7 @@ public enum ScreenplayPDF {
             case .character: x = 252; width = 252
             case .dialogue: x = 180; width = 252
             case .parenthetical: x = 216; width = 180
-            default: x = 108; width = 432
+            default: x = 108; width = bodyWidth
             }
             let visible = presentationText(element)
             guard !visible.isEmpty else { continue }
@@ -247,9 +256,9 @@ public enum ScreenplayPDF {
                 if y > bottom { finishPage() }
                 let lineX: CGFloat
                 if element.kind == .transition {
-                    lineX = max(108, 540 - textWidth(text, bold: bold, settings: settings))
+                    lineX = max(108, right - textWidth(text, bold: bold, settings: settings))
                 } else if element.kind == .centred {
-                    lineX = max(108, (612 - textWidth(text, bold: bold, settings: settings)) / 2)
+                    lineX = max(108, (size.width - textWidth(text, bold: bold, settings: settings)) / 2)
                 } else { lineX = x }
                 lines.append(ScreenplayPDFLine(text: text, x: lineX, baseline: y, bold: bold))
                 y += lineHeight
@@ -304,9 +313,9 @@ public enum ScreenplayPDF {
     }
 
     @MainActor
-    private static func draw(_ text: String, x: CGFloat, baseline: CGFloat, bold: Bool, settings: ScreenplaySettings, in context: CGContext) {
+    private static func draw(_ text: String, x: CGFloat, baseline: CGFloat, bold: Bool, settings: ScreenplaySettings, pageHeight: CGFloat, in context: CGContext) {
         context.textMatrix = .identity
-        context.textPosition = CGPoint(x: x, y: pageSize.height - baseline)
+        context.textPosition = CGPoint(x: x, y: pageHeight - baseline)
         CTLineDraw(CTLineCreateWithAttributedString(attributed(text, bold: bold, settings: settings)), context)
     }
 }

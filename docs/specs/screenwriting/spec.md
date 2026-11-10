@@ -80,3 +80,5 @@ Section heading typography uses the macOS system sans font at semibold weight in
 [12. Automatic curly apostrophes](tickets/12-curly-apostrophes.md) converts single typed apostrophes to U+2019 through native insertion, preserving existing files and multi-character paste.
 
 [13. Persistent regression coverage](tickets/13-regression-suite.md) adds repeatable native app tests alongside the core suite. [Test coverage](../../../Tests/README.md) records verified behaviours and remaining manual boundaries.
+
+Follow-up: [14. Title-page preview and per-screenplay paper size](tickets/14-title-preview-paper.md). Command-P opens a live PDF preview with Print, Export and a per-file US Letter/A4 selector. `Paper:` metadata persists in Fountain; standard title-page layout and unnumbered overflow share the PDF renderer.

@@ -63,6 +63,8 @@ final class ActApplicationDelegate: NSObject, NSApplicationDelegate, NSMenuItemV
         return documents.currentDocument as? FountainDocument
     }
 
+    @objc private func previewCurrentDocument(_ sender: Any?) { activeDocument?.showPDFPreview() }
+
     @objc private func saveCurrentDocument(_ sender: Any?) { activeDocument?.save(sender) }
     @objc private func saveCurrentDocumentAs(_ sender: Any?) { activeDocument?.saveAs(sender) }
     @objc private func revertCurrentDocument(_ sender: Any?) { activeDocument?.revertToSaved(sender) }
@@ -99,6 +101,8 @@ final class ActApplicationDelegate: NSObject, NSApplicationDelegate, NSMenuItemV
         saveAs.target = self
         saveAs.keyEquivalentModifierMask = [.command, .shift]
         file.addItem(withTitle: "Revert to Saved…", action: #selector(revertCurrentDocument(_:)), keyEquivalent: "").target = self
+        file.addItem(.separator())
+        file.addItem(withTitle: "PDF Preview…", action: #selector(previewCurrentDocument(_:)), keyEquivalent: "p").target = self
         menu.addItem(withTitle: "File", action: nil, keyEquivalent: "").submenu = file
         let edit = NSMenu(title: "Edit")
         edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")

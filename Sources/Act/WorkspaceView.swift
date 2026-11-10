@@ -46,6 +46,7 @@ struct WorkspaceView: View {
                         Toggle("Fountain source", isOn: $sourceMode)
                             .keyboardShortcut("m", modifiers: [.command, .shift])
                         Divider()
+                        Button("PDF Preview…") { document.showPDFPreview() }
                         Button("Export PDF…", action: exportPDF)
                             .keyboardShortcut("e", modifiers: [.command, .shift])
                     }

@@ -190,7 +190,7 @@ public enum FountainParser {
     private static func isTitleField(_ text: String) -> Bool {
         guard let colon = text.firstIndex(of: ":") else { return false }
         let key = text[..<colon].lowercased()
-        return ["title", "credit", "author", "authors", "source", "draft date", "contact", "copyright", "notes"].contains(key)
+        return ["title", "credit", "author", "authors", "source", "draft date", "contact", "copyright", "notes", "paper"].contains(key)
     }
 
     private static func sceneNumber(_ heading: String) -> String? {

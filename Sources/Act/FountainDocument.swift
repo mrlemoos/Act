@@ -16,6 +16,7 @@ final class FountainDocument: NSDocument, ObservableObject {
     @Published var isShotWorkspaceActive = false
     @Published var isCharacterWorkspaceActive = false
     @Published var showsSettings = false
+    private var pdfPreview: ScreenplayPreviewController?
     private var textFile = DocumentText()
     private var snapshot: DocumentFileSnapshot?
 
@@ -51,6 +52,28 @@ final class FountainDocument: NSDocument, ObservableObject {
         shotWorkspace.updateScreenplaySource(newSource)
         textFile.source = newSource
         updateChangeCount(undoManager?.isUndoing == true ? .changeUndone : undoManager?.isRedoing == true ? .changeRedone : .changeDone)
+    }
+
+    func setPaper(_ paper: ScreenplayPaper) {
+        replaceSource(paper.updating(source))
+        undoManager?.setActionName("Paper size")
+    }
+
+    func showPDFPreview() {
+        if pdfPreview == nil {
+            let controller = ScreenplayPreviewController(document: self)
+            pdfPreview = controller
+            addWindowController(controller)
+        }
+        pdfPreview?.model.refresh()
+        pdfPreview?.showWindow(nil)
+        pdfPreview?.window?.makeKeyAndOrderFront(nil)
+    }
+
+    override func close() {
+        pdfPreview?.close()
+        pdfPreview = nil
+        super.close()
     }
 
     override func save(_ sender: Any?) {
