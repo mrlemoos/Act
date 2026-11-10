@@ -1,6 +1,25 @@
-# Act
+<p align="center">
+  <img src="Resources/Brand/Act.png" width="168" alt="Act app icon: a white fountain-pen nib on a dark rounded tile">
+</p>
 
-A macOS screenwriting app built in Swift, SwiftUI and AppKit. Fountain files remain plain text. Courier writing, scene navigation, PDF export and a separate shot-planning workspace share one document window.
+<h1 align="center">Act</h1>
+
+<p align="center">
+  Write the screenplay on your Mac.<br>
+  Keep it as Fountain. Plan the shoot beside the page.
+</p>
+
+Act is a native screenplay app for people who want a proper page, a shot list, and a face for the cast, without giving the script to a proprietary format or a cloud editor.
+
+**What it is.** A Fountain editor with scene navigation and PDF export, in one document window. Two further workspaces sit beside the screenplay: a shot list for the scene you are planning, and character reference sheets for names you mark yourself.
+
+**Why it exists.** The screenplay is the work. Plans go stale, models invent detail, and image tools cost money and leave the machine. Act treats the UTF-8 Fountain file as the only source of truth. Shot lists and character libraries are separate files. Local inference reads a scene or a marked paragraph. It does not rewrite the page. An image request goes out only after you approve the prompt.
+
+**How you use it.** Open a `.fountain` file and write in the formatted view; the markers stay in the file. Switch to the shot list and add shots yourself, or generate them for the selected scene with a model on your Mac. Mark a character name in action, extract physical detail locally, then send a prompt you have already read.
+
+The sections below are the working guide: install, writing, shots, local models, and character sheets.
+
+---
 
 ## Run
 
