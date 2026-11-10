@@ -47,6 +47,8 @@ Completion requires recorded behavioural checks and an app bundle. Building alon
 - Custom font, collaboration and AI prose rewriting.
 - Cloud inference, signing, notarisation and publication.
 
+The approved [character reference sheets](character-sheets.md) follow-up permits explicit external image-agent requests. This does not change offline shot generation or authorise cloud character extraction.
+
 ## Unresolved decisions
 
 - Local runtime and model, implementation team, blocks actual inference only.

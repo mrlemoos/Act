@@ -3,10 +3,12 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
+enum WorkspaceSection: String { case screenplay, shots, characters }
+
 struct WorkspaceView: View {
     @ObservedObject var document: FountainDocument
     @State private var sourceMode = false
-    @State private var showShots = false
+    @State private var workspace: WorkspaceSection = .screenplay
     @ObservedObject private var preferences: WritingPreferences
     @State private var selectedOutlineEntry: String?
     @State private var selection = NSRange(location: 0, length: 0)
@@ -14,10 +16,11 @@ struct WorkspaceView: View {
     @State private var showOutline = false
     @State private var errorMessage: String?
 
-    init(document: FountainDocument, initiallyShowsOutline: Bool = false, preferences: WritingPreferences = .shared) {
+    init(document: FountainDocument, initiallyShowsOutline: Bool = false, preferences: WritingPreferences = .shared, initialWorkspace: WorkspaceSection = .screenplay) {
         self.document = document
         self.preferences = preferences
         _showOutline = State(initialValue: initiallyShowsOutline)
+        _workspace = State(initialValue: initialWorkspace)
     }
 
     private var screenplay: FountainScreenplay { FountainParser.parse(document.source) }
@@ -31,14 +34,15 @@ struct WorkspaceView: View {
                     .help("Toggle scene outline")
                     .accessibilityLabel("Toggle scene outline")
                 Spacer()
-                Picker("Workspace", selection: $showShots) {
-                    Text("Screenplay").tag(false)
-                    Text("Shot list").tag(true)
-                }.pickerStyle(.segmented).labelsHidden().frame(width: 196)
+                Picker("Workspace", selection: $workspace) {
+                    Text("Screenplay").tag(WorkspaceSection.screenplay)
+                    Text("Shot list").tag(WorkspaceSection.shots)
+                    Text("Characters").tag(WorkspaceSection.characters)
+                }.pickerStyle(.segmented).labelsHidden().frame(width: 300)
                 Spacer()
                 Menu {
                     Toggle("Scene outline", isOn: $showOutline)
-                    if !showShots {
+                    if workspace == .screenplay {
                         Toggle("Fountain source", isOn: $sourceMode)
                             .keyboardShortcut("m", modifiers: [.command, .shift])
                         Divider()
@@ -60,8 +64,10 @@ struct WorkspaceView: View {
                     outline.frame(width: 228)
                     Divider()
                 }
-                if showShots {
+                if workspace == .shots {
                     ShotWorkspace(document: document)
+                } else if workspace == .characters {
+                    CharacterWorkspace(document: document)
                 } else {
                     screenplayEditor
                 }
@@ -74,10 +80,17 @@ struct WorkspaceView: View {
 
         }
         .frame(minWidth: 820, minHeight: 540)
-        .onChange(of: showShots) { _, value in document.isShotWorkspaceActive = value }
+        .onChange(of: workspace) { _, value in
+            document.isShotWorkspaceActive = value == .shots
+            document.isCharacterWorkspaceActive = value == .characters
+        }
         .onChange(of: document.showsSettings) { _, value in if value { showOutline = false } }
         .onChange(of: showOutline) { _, value in if value { document.showsSettings = false } }
-        .onAppear { if document.showsSettings { showOutline = false } }
+        .onAppear {
+            if document.showsSettings { showOutline = false }
+            document.isShotWorkspaceActive = workspace == .shots
+            document.isCharacterWorkspaceActive = workspace == .characters
+        }
         .alert("Unable to export PDF", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             Button("OK") { errorMessage = nil }
         } message: { Text(errorMessage ?? "") }
@@ -101,7 +114,7 @@ struct WorkspaceView: View {
                             selectedOutlineEntry = entry.id
                             selection = NSRange(location: entry.range.location, length: 0)
                             selectionRequest = UUID()
-                            showShots = false
+                            workspace = .screenplay
                         } label: {
                             Text(entry.text.isEmpty ? (entry.kind == .section ? "Untitled section" : "Synopsis") : entry.text)
                                 .font(.system(size: entry.kind == .section ? 12 : 11, weight: entry.kind == .section ? .semibold : entry.kind == .synopsis ? .regular : .medium))

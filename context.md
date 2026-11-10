@@ -19,3 +19,5 @@ Link relevant [specs](docs/specs/README.md). Completed changes retain durable ra
 Act is a macOS-only Swift app for editing UTF-8 Fountain and planning shots with offline Apple Silicon inference. Raw Fountain remains authoritative. Shot lists are separate versioned JSON files; generation never edits screenplay source.
 
 Active specification: [Act screenwriting v1](docs/specs/screenwriting/spec.md). Validation: `swift test`, `scripts/build-app.sh`, and `node .galicia/check.ts`. See [README](README.md) for native checks and model setup.
+
+[Character reference sheets](docs/specs/screenwriting/character-sheets.md) adds manually marked action names, local MLX physical extraction and explicitly approved image-agent requests. Libraries live beside the screenplay; image generation never changes Fountain source.

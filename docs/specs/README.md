@@ -19,3 +19,4 @@ Startup checker flags metadata inconsistencies and lifecycle review candidates. 
 ## Active work
 
 - [Act screenwriting v1](screenwriting/spec.md)
+- [Character reference sheets](screenwriting/character-sheets.md)

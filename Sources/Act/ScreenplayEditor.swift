@@ -4,10 +4,17 @@ import SwiftUI
 
 struct ScreenplayEditor: NSViewRepresentable {
     @ObservedObject var document: FountainDocument
+    @ObservedObject private var characters: CharacterWorkspaceModel
     let sourceMode: Bool
     let selection: NSRange
     let selectionRequest: UUID
     var settings: ScreenplaySettings = .standard
+
+    init(document: FountainDocument, sourceMode: Bool, selection: NSRange, selectionRequest: UUID, settings: ScreenplaySettings = .standard) {
+        self.document = document; self.sourceMode = sourceMode; self.selection = selection
+        self.selectionRequest = selectionRequest; self.settings = settings
+        characters = document.characterWorkspace
+    }
 
     private var resolvedFont: NSFont {
         let preference = settings.validated
@@ -26,6 +33,7 @@ struct ScreenplayEditor: NSViewRepresentable {
         scroll.borderType = .noBorder
         scroll.backgroundColor = .textBackgroundColor
         let text = ScreenplayTextView(frame: .zero)
+        characters.prepare(screenplayURL: document.fileURL, source: document.source)
         text.screenplayDocument = document
         text.isRichText = false
         text.allowsUndo = false
@@ -175,6 +183,13 @@ struct ScreenplayEditor: NSViewRepresentable {
                 }
                 collapseSurplusBlankLines(in: script, storage: storage, font: font)
             }
+            for character in parent.characters.library.characters {
+                for mark in character.marks where !mark.isDetached && mark.nameRange.location >= 0 && NSMaxRange(mark.nameRange) <= storage.length {
+                    storage.addAttribute(.backgroundColor, value: CharacterColours.colour(character.colourIndex).withAlphaComponent(0.18), range: mark.nameRange)
+                    storage.addAttribute(.foregroundColor, value: CharacterColours.colour(character.colourIndex), range: mark.nameRange)
+                    storage.addAttribute(.toolTip, value: "Character: \(character.name)", range: mark.nameRange)
+                }
+            }
             storage.endEditing()
             screenplayTextView?.needsDisplay = true
             textView.typingAttributes = [.font: font, .foregroundColor: NSColor.textColor, .paragraphStyle: base]
@@ -275,6 +290,41 @@ final class ScreenplayTextView: NSTextView {
     weak var screenplayDocument: FountainDocument?
     var continuations: [Continuation] = []
     override var undoManager: UndoManager? { screenplayDocument?.undoManager }
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        let menu = super.menu(for: event) ?? NSMenu()
+        guard let document = screenplayDocument,
+              (try? CharacterActionBlock.selected(in: string, range: selectedRange())) != nil else { return menu }
+        menu.addItem(.separator())
+        let create = menu.addItem(withTitle: "Mark as New Character", action: #selector(markCharacter(_:)), keyEquivalent: "")
+        create.target = self
+        if !document.characterWorkspace.library.characters.isEmpty {
+            let link = NSMenu(title: "Link to Character")
+            for character in document.characterWorkspace.library.characters {
+                let item = link.addItem(withTitle: character.name, action: #selector(markCharacter(_:)), keyEquivalent: "")
+                item.target = self; item.representedObject = character.id.uuidString
+            }
+            let item = menu.addItem(withTitle: "Link to Character", action: nil, keyEquivalent: "")
+            item.submenu = link
+        }
+        return menu
+    }
+
+    @objc func markCharacter(_ sender: NSMenuItem) {
+        guard let document = screenplayDocument else { return }
+        let selection = selectedRange()
+        if document.fileURL == nil {
+            document.saveAs(nil)
+            guard document.fileURL != nil else { return }
+        }
+        document.characterWorkspace.prepare(screenplayURL: document.fileURL, source: document.source)
+        let id = (sender.representedObject as? String).flatMap(UUID.init(uuidString:))
+        _ = document.characterWorkspace.mark(selection: selection, characterID: id)
+        (delegate as? ScreenplayEditor.Coordinator)?.format()
+        if let error = document.characterWorkspace.error {
+            let alert = NSAlert(); alert.messageText = "Unable to mark character"; alert.informativeText = error; alert.runModal()
+        }
+    }
 
     override func insertText(_ insertString: Any, replacementRange: NSRange) {
         if let text = insertString as? String, text == "'", !hasMarkedText() {

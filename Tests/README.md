@@ -10,7 +10,7 @@ swift test
 
 ## Coverage
 
-Current suite: 79 core tests and 26 native app tests. The final full run passed all 105 with both real-model checks enabled and no skips. The default command skips those two opt-in checks.
+Current suite: 93 core tests and 32 native app tests. The character-sheet validation run passed 123 of 125, with actual MLX extraction enabled and the two older GGUF inference checks skipped. The default command skips all three real-model checks. Native preview rendering runs only when its output directory is configured. [Character-sheet evidence](../docs/specs/screenwriting/character-sheets-validation.md).
 
 | Behaviour | Evidence |
 |---|---|
@@ -29,12 +29,16 @@ Current suite: 79 core tests and 26 native app tests. The final full run passed 
 | Recovery metadata, first-save/rename migration, unique matching and write failure | ShotRecoveryTests |
 | Generation locks, missing setup, asynchronous failure and preserved manual work | ShotWorkspaceTests |
 | Local process success/failure/cancellation, trusted scene IDs and malformed output | GenerationTests |
+| Manual action-name marks, comment exclusion, physical evidence, linked traits and stale anchors | CharacterSheetTests |
+| Offline MLX arguments, literal prompts, raster validation and subprocess-group cancellation | CharacterSheetTests |
+| Native highlight/source/caret/undo preservation, portable libraries, prompts and Save As | CharacterWorkspaceTests |
+| Source changes during extraction preserve previous details and edited prompts | CharacterWorkspaceTests |
 
 The tests make assertions against saved bytes, native document state, attributed text and glyph bounds. Live example tests compare renders before and after each style change within the same run, using the actual observed view. They use no stored snapshot goldens or implementation-source comparisons.
 
 ## Actual local AI
 
-The two real-model tests are skipped by default. Enable them explicitly using existing compatible GGUF files:
+The two GGUF tests are skipped by default. Enable them explicitly using existing compatible GGUF files:
 
 ```sh
 ACT_TEST_MODEL=/absolute/path/to/model.gguf swift test --filter GenerationTests
@@ -47,6 +51,22 @@ ACT_TEST_DOWNLOAD_DIRECTORY="$PWD/.scratch/recommended-model" swift test --filte
 ```
 
 Both opt-in tests were run against the existing Qwen2.5 7B model during this change. A schema-valid result is not proof of faithful or useful cinematography.
+
+## Character extraction and previews
+
+Actual local MLX extraction can be enabled independently of GGUF tests:
+
+```sh
+ACT_TEST_MLX_RUNTIME=/absolute/path/mlx_lm.generate ACT_TEST_MLX_MODEL=/absolute/path/mlx-model swift test --filter CharacterSheetTests.testRealMLXExtractionWhenExplicitlyConfigured
+```
+
+To render the actual character workspace in light/dark modes, including a narrow layout and marked editor:
+
+```sh
+ACT_TEST_CHARACTER_PREVIEW_DIRECTORY="$PWD/.scratch/character-sheets-preview" swift test --filter CharacterWorkspaceTests.renderActualCharacterWorkspaceWhenRequested
+```
+
+Image-agent tests use local fixture subprocesses. Actual external generation and reference-image editing require explicit in-app prompt approval and result inspection for each configured account. Fixture raster output is not evidence of live agent capability.
 
 ## Manual and untested boundaries
 

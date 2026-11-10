@@ -58,10 +58,30 @@ To run the opt-in real-model adapter check:
 ACT_TEST_MODEL=/absolute/path/to/model.gguf swift test --filter GenerationTests
 ```
 
+## Character reference sheets
+
+Select a character name inside an action paragraph, right-click and choose **Mark as New Character**. To add another introduction or appearance description to the same character, select that occurrence and choose **Link to Character**. Marks have persistent character colours and are stored separately from Fountain. Act does not discover or mark other characters automatically.
+
+Open **Characters** beside Screenplay and Shot list. In **Character tools**, choose `mlx_lm.generate` and an existing local MLX model folder. MLX models use safetensors weights; the shot planner's GGUF model is a different format. If needed, install the runtime separately:
+
+```sh
+uv tool install mlx-lm
+```
+
+Choose **Extract physical details** to process only the marked action paragraphs locally. Review the evidence and any conflicting values. Extraction fills an empty model-sheet prompt. Existing prompt edits remain intact; **Use extracted details** explicitly replaces them after confirmation. Missing appearance remains unspecified.
+
+Character tools supports Codex, Claude Code, Grok Build and Cursor Agent. Sign in and configure image tools in the chosen terminal agent first. Use **Test generation**, approve its sample prompt and inspect the returned image. Only successful, confirmed connections appear in the generation picker. **Test editing** independently enables iteration with a reference image. Tests and generation use the agent's account and may incur charges; a subscription or installed executable alone does not establish image capability. Cursor must use `cursor-agent`, not the ambiguous `agent` alias.
+
+Edit the prompt and choose **Generate new sheet** when ready. Act previews the outgoing description and reference image, if any, before each external request. It starts the chosen CLI in the background and imports only a validated raster image. **Iterate on active sheet** sends the active image with your edited prompt. Every success adds a version, retaining earlier images and their prompts. Cancellation or failure keeps your work. No provider fallback occurs.
+
+For `Draft.fountain`, characters live in `Draft.characters/characters.json` with an `images` folder. Move or share that folder with the screenplay. Metadata autosaves separately; Save As copies the library while preserving the original. Changed action paragraphs require review and explicit re-extraction. Changed or missing name anchors require relinking, with the old occurrence removable in Characters.
+
+The local MLX path has been tested with the ORLEANS example and an existing Qwen3.5 4B MLX model. Live paid image-agent generation is still subject to each account's explicit in-app capability tests. [Validation and limits](docs/specs/screenwriting/character-sheets-validation.md).
+
 ## Project records
 
 The [specification](docs/specs/screenwriting/spec.md) links eight approved tickets. [Inference research](docs/specs/screenwriting/local-inference-research.md) records runtime/model sources and actual verification. [Validation](docs/specs/screenwriting/validation.md) distinguishes automated checks from native UI and model evidence.
 
 ## Tests
 
-Run `swift test` for core and hidden native-view regressions. The two real-model checks are opt-in. [Coverage and commands](Tests/README.md) distinguish automated evidence from remaining desktop checks.
+Run `swift test` for core and hidden native-view regressions. The three real-model checks are opt-in. [Coverage and commands](Tests/README.md) distinguish automated evidence from remaining desktop checks.

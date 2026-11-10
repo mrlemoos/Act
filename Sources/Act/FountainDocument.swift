@@ -12,7 +12,9 @@ extension UTType {
 final class FountainDocument: NSDocument, ObservableObject {
     @Published private(set) var source = ""
     lazy var shotWorkspace = ShotWorkspaceModel()
+    lazy var characterWorkspace = CharacterWorkspaceModel()
     @Published var isShotWorkspaceActive = false
+    @Published var isCharacterWorkspaceActive = false
     @Published var showsSettings = false
     private var textFile = DocumentText()
     private var snapshot: DocumentFileSnapshot?
@@ -20,7 +22,10 @@ final class FountainDocument: NSDocument, ObservableObject {
     override var fileURL: URL? {
         didSet {
             MainActor.assumeIsolated {
-                if let fileURL { shotWorkspace.relocateRecovery(identity: fileURL.path) }
+                if let fileURL {
+                    shotWorkspace.relocateRecovery(identity: fileURL.path)
+                    characterWorkspace.prepare(screenplayURL: fileURL, source: source)
+                }
             }
         }
     }
@@ -42,6 +47,7 @@ final class FountainDocument: NSDocument, ObservableObject {
         undoManager?.registerUndo(withTarget: self) { target in target.replaceSource(previous) }
         undoManager?.setActionName("Writing")
         source = newSource
+        characterWorkspace.updateSource(newSource)
         shotWorkspace.updateScreenplaySource(newSource)
         textFile.source = newSource
         updateChangeCount(undoManager?.isUndoing == true ? .changeUndone : undoManager?.isRedoing == true ? .changeRedone : .changeDone)
@@ -49,6 +55,7 @@ final class FountainDocument: NSDocument, ObservableObject {
 
     override func save(_ sender: Any?) {
         if isShotWorkspaceActive { shotWorkspace.save() }
+        else if isCharacterWorkspaceActive { characterWorkspace.save() }
         else { super.save(sender) }
     }
 
@@ -58,7 +65,15 @@ final class FountainDocument: NSDocument, ObservableObject {
     }
 
     func confirmShotClosure() -> Bool {
-        guard shotWorkspace.isDirty else { shotWorkspace.cancel(); return true }
+        characterWorkspace.save()
+        guard !characterWorkspace.isDirty else {
+            let alert = NSAlert()
+            alert.messageText = "Character edits could not be saved"
+            alert.informativeText = characterWorkspace.error ?? "Save your screenplay before closing to keep its character library."
+            alert.runModal()
+            return false
+        }
+        guard shotWorkspace.isDirty else { shotWorkspace.cancel(); characterWorkspace.cancel(); return true }
         let alert = NSAlert()
         alert.messageText = "Save changes to your shot list?"
         alert.informativeText = "The shot list is saved separately from your screenplay."
@@ -73,6 +88,7 @@ final class FountainDocument: NSDocument, ObservableObject {
         default: return false
         }
         shotWorkspace.cancel()
+        characterWorkspace.cancel()
         return true
     }
 
@@ -84,6 +100,7 @@ final class FountainDocument: NSDocument, ObservableObject {
         try MainActor.assumeIsolated {
             textFile = try DocumentText(data: data)
             source = textFile.source
+            characterWorkspace.updateSource(source)
             shotWorkspace.updateScreenplaySource(source)
             snapshot = DocumentFileSnapshot(data: data)
         }
