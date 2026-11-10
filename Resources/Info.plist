@@ -18,11 +18,22 @@
 <key>LSHandlerRank</key><string>Alternate</string>
 <key>LSItemContentTypes</key><array><string>dev.act.fountain</string><string>public.plain-text</string></array>
 <key>NSDocumentClass</key><string>FountainDocument</string>
+</dict><dict>
+<key>CFBundleTypeName</key><string>Act project board</string>
+<key>CFBundleTypeRole</key><string>Editor</string>
+<key>LSHandlerRank</key><string>Owner</string>
+<key>LSItemContentTypes</key><array><string>dev.act.project</string></array>
+<key>NSDocumentClass</key><string>ProjectBoardDocument</string>
 </dict></array>
 <key>UTExportedTypeDeclarations</key><array><dict>
 <key>UTTypeIdentifier</key><string>dev.act.fountain</string>
 <key>UTTypeDescription</key><string>Fountain screenplay</string>
 <key>UTTypeConformsTo</key><array><string>public.plain-text</string></array>
 <key>UTTypeTagSpecification</key><dict><key>public.filename-extension</key><array><string>fountain</string></array><key>public.mime-type</key><string>text/plain</string></dict>
+</dict><dict>
+<key>UTTypeIdentifier</key><string>dev.act.project</string>
+<key>UTTypeDescription</key><string>Act project board</string>
+<key>UTTypeConformsTo</key><array><string>public.json</string></array>
+<key>UTTypeTagSpecification</key><dict><key>public.filename-extension</key><array><string>actboard</string></array></dict>
 </dict></array>
 </dict></plist>

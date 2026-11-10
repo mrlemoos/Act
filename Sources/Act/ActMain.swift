@@ -35,6 +35,9 @@ final class ActApplicationDelegate: NSObject, NSApplicationDelegate, NSMenuItemV
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        for case let project as ProjectBoardDocument in documents.documents {
+            if project.workspaceHost == nil && !project.confirmTermination() { return .terminateCancel }
+        }
         for case let document as FountainDocument in documents.documents {
             if !document.confirmShotClosure() { return .terminateCancel }
         }
@@ -63,13 +66,24 @@ final class ActApplicationDelegate: NSObject, NSApplicationDelegate, NSMenuItemV
         return documents.currentDocument as? FountainDocument
     }
 
+    @objc private func newProject(_ sender: Any?) {
+        do {
+            let document = try documents.makeUntitledDocument(ofType: "dev.act.project")
+            documents.addDocument(document); document.makeWindowControllers(); document.showWindows()
+        } catch { NSApp.presentError(error) }
+    }
+
+    private var activeFileDocument: NSDocument? {
+        NSApp.keyWindow?.windowController?.document as? NSDocument ?? documents.currentDocument
+    }
+
     @objc private func previewCurrentDocument(_ sender: Any?) { activeDocument?.showPDFPreview() }
 
-    @objc private func saveCurrentDocument(_ sender: Any?) { activeDocument?.save(sender) }
-    @objc private func saveCurrentDocumentAs(_ sender: Any?) { activeDocument?.saveAs(sender) }
-    @objc private func revertCurrentDocument(_ sender: Any?) { activeDocument?.revertToSaved(sender) }
+    @objc private func saveCurrentDocument(_ sender: Any?) { activeFileDocument?.save(sender) }
+    @objc private func saveCurrentDocumentAs(_ sender: Any?) { activeFileDocument?.saveAs(sender) }
+    @objc private func revertCurrentDocument(_ sender: Any?) { activeFileDocument?.revertToSaved(sender) }
     @objc private func closeCurrentDocument(_ sender: Any?) {
-        guard let document = activeDocument else { return }
+        guard let document = activeFileDocument else { return }
         let window = document.windowControllers.compactMap(\.window).first { $0.isKeyWindow || $0.isMainWindow }
             ?? document.windowControllers.first?.window
         window?.performClose(sender)
@@ -77,8 +91,9 @@ final class ActApplicationDelegate: NSObject, NSApplicationDelegate, NSMenuItemV
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         if menuItem.action == #selector(openSettings(_:)) { return true }
-        if menuItem.action == #selector(revertCurrentDocument(_:)) { return activeDocument?.fileURL != nil }
-        return activeDocument != nil
+        if menuItem.action == #selector(revertCurrentDocument(_:)) { if let host = activeFileDocument as? FountainDocument, host.requestedWorkspace == .board { return host.projectBoard?.fileURL != nil }
+            return activeFileDocument?.fileURL != nil }
+        return activeFileDocument != nil
     }
 
     private func makeMenu() -> NSMenu {
@@ -93,6 +108,7 @@ final class ActApplicationDelegate: NSObject, NSApplicationDelegate, NSMenuItemV
         menu.addItem(withTitle: "Act", action: nil, keyEquivalent: "").submenu = app
         let file = NSMenu(title: "File")
         file.addItem(withTitle: "New", action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "n").target = documents
+        file.addItem(withTitle: "New Project", action: #selector(newProject(_:)), keyEquivalent: "N").target = self
         file.addItem(withTitle: "Open…", action: #selector(NSDocumentController.openDocument(_:)), keyEquivalent: "o").target = documents
         file.addItem(.separator())
         file.addItem(withTitle: "Close", action: #selector(closeCurrentDocument(_:)), keyEquivalent: "w").target = self

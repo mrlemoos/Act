@@ -3,7 +3,7 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-enum WorkspaceSection: String { case screenplay, shots, characters }
+enum WorkspaceSection: String { case screenplay, shots, characters, board }
 
 struct WorkspaceView: View {
     @ObservedObject var document: FountainDocument
@@ -35,10 +35,11 @@ struct WorkspaceView: View {
                     .accessibilityLabel("Toggle scene outline")
                 Spacer()
                 Picker("Workspace", selection: $workspace) {
+                    Text("Board").tag(WorkspaceSection.board)
                     Text("Screenplay").tag(WorkspaceSection.screenplay)
                     Text("Shot list").tag(WorkspaceSection.shots)
                     Text("Characters").tag(WorkspaceSection.characters)
-                }.pickerStyle(.segmented).labelsHidden().frame(width: 300)
+                }.pickerStyle(.segmented).labelsHidden().frame(width: 380)
                 Spacer()
                 Menu {
                     Toggle("Scene outline", isOn: $showOutline)
@@ -61,11 +62,13 @@ struct WorkspaceView: View {
             .background(Color(nsColor: .windowBackgroundColor))
             Divider()
             HStack(spacing: 0) {
-                if showOutline {
+                if showOutline && workspace != .board {
                     outline.frame(width: 228)
                     Divider()
                 }
-                if workspace == .shots {
+                if workspace == .board {
+                    if let board = document.projectBoard { ProjectBoardView(document: board) }
+                } else if workspace == .shots {
                     ShotWorkspace(document: document)
                 } else if workspace == .characters {
                     CharacterWorkspace(document: document)
@@ -81,13 +84,23 @@ struct WorkspaceView: View {
 
         }
         .frame(minWidth: 820, minHeight: 540)
+        .onChange(of: document.requestedWorkspace) { _, value in if let value { workspace = value } }
+        .onChange(of: document.requestedSceneID) { _, value in
+            if let scene = screenplay.scenes.first(where: { $0.id == value }) {
+                workspace = .screenplay; selection = NSRange(location: scene.range.location, length: 0); selectionRequest = UUID()
+            }
+        }
         .onChange(of: workspace) { _, value in
+            document.requestedWorkspace = value
+            if value == .board { document.ensureProjectBoard() }
             document.isShotWorkspaceActive = value == .shots
             document.isCharacterWorkspaceActive = value == .characters
         }
         .onChange(of: document.showsSettings) { _, value in if value { showOutline = false } }
         .onChange(of: showOutline) { _, value in if value { document.showsSettings = false } }
         .onAppear {
+            if let requested = document.requestedWorkspace { workspace = requested }
+            if workspace == .board { document.ensureProjectBoard() }
             if document.showsSettings { showOutline = false }
             document.isShotWorkspaceActive = workspace == .shots
             document.isCharacterWorkspaceActive = workspace == .characters

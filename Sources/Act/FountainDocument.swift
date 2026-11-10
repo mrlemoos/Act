@@ -16,6 +16,9 @@ final class FountainDocument: NSDocument, ObservableObject {
     @Published var isShotWorkspaceActive = false
     @Published var isCharacterWorkspaceActive = false
     @Published var showsSettings = false
+    @Published var requestedWorkspace: WorkspaceSection?
+    @Published var requestedSceneID: String?
+    @Published private(set) var projectBoard: ProjectBoardDocument?
     private var pdfPreview: ScreenplayPreviewController?
     private var textFile = DocumentText()
     private var snapshot: DocumentFileSnapshot?
@@ -40,6 +43,30 @@ final class FountainDocument: NSDocument, ObservableObject {
     override init() {
         super.init()
         hasUndoManager = true
+    }
+
+    func ensureProjectBoard() {
+        guard projectBoard == nil else { return }
+        let board = ProjectBoardDocument()
+        board.fileType = UTType.actProject.identifier
+        NSDocumentController.shared.addDocument(board)
+        attachProjectBoard(board)
+    }
+
+    func attachProjectBoard(_ board: ProjectBoardDocument) {
+        projectBoard = board
+        board.workspaceHost = self
+        requestedWorkspace = .board
+    }
+
+    func detachProjectBoard(_ board: ProjectBoardDocument) {
+        guard projectBoard === board else { return }
+        projectBoard = nil
+        if requestedWorkspace == .board { requestedWorkspace = .screenplay }
+    }
+
+    var workspaceUndoManager: UndoManager? {
+        requestedWorkspace == .board ? projectBoard?.undoManager : undoManager
     }
 
     func replaceSource(_ newSource: String) {
@@ -71,23 +98,32 @@ final class FountainDocument: NSDocument, ObservableObject {
     }
 
     override func close() {
+        projectBoard?.close()
         pdfPreview?.close()
         pdfPreview = nil
         super.close()
     }
 
     override func save(_ sender: Any?) {
-        if isShotWorkspaceActive { shotWorkspace.save() }
+        if requestedWorkspace == .board { ensureProjectBoard(); projectBoard?.save(sender) }
+        else if isShotWorkspaceActive { shotWorkspace.save() }
         else if isCharacterWorkspaceActive { characterWorkspace.save() }
         else { super.save(sender) }
     }
 
     override func saveAs(_ sender: Any?) {
-        if isShotWorkspaceActive { shotWorkspace.save(asCopy: true) }
+        if requestedWorkspace == .board { ensureProjectBoard(); projectBoard?.saveAs(sender) }
+        else if isShotWorkspaceActive { shotWorkspace.save(asCopy: true) }
         else { super.saveAs(sender) }
     }
 
+    override func revertToSaved(_ sender: Any?) {
+        if requestedWorkspace == .board { projectBoard?.revertToSaved(sender) }
+        else { super.revertToSaved(sender) }
+    }
+
     func confirmShotClosure() -> Bool {
+        if let projectBoard, !projectBoard.confirmTermination() { return false }
         characterWorkspace.save()
         guard !characterWorkspace.isDirty else {
             let alert = NSAlert()
@@ -169,8 +205,8 @@ final class FountainDocument: NSDocument, ObservableObject {
 final class ActDocumentController: NSDocumentController {
     override func openDocument(_ sender: Any?) {
         let panel = NSOpenPanel()
-        panel.title = "Open screenplay"
-        panel.message = "Choose a UTF-8 Fountain screenplay."
+        panel.title = "Open screenplay or project"
+        panel.message = "Choose a Fountain screenplay or .actboard project."
         // Fountain is plain text and other editors register competing UTIs for
         // its extension. An unrestricted panel keeps those documents selectable.
         // DocumentText validates the actual bytes before a document is opened.
@@ -191,15 +227,15 @@ final class ActDocumentController: NSDocumentController {
     }
 
     override var defaultType: String? { UTType.fountain.identifier }
-    override func documentClass(forType typeName: String) -> AnyClass? { FountainDocument.self }
-    override func typeForContents(of url: URL) throws -> String { UTType.fountain.identifier }
+    override func documentClass(forType typeName: String) -> AnyClass? { typeName == UTType.actProject.identifier ? ProjectBoardDocument.self : FountainDocument.self }
+    override func typeForContents(of url: URL) throws -> String { url.pathExtension.lowercased() == "actboard" ? UTType.actProject.identifier : UTType.fountain.identifier }
     override func makeUntitledDocument(ofType typeName: String) throws -> NSDocument {
-        let document = FountainDocument()
+        let document: NSDocument = typeName == UTType.actProject.identifier ? ProjectBoardDocument() : FountainDocument()
         document.fileType = typeName
         return document
     }
     override func makeDocument(withContentsOf url: URL, ofType typeName: String) throws -> NSDocument {
-        let document = FountainDocument()
+        let document: NSDocument = typeName == UTType.actProject.identifier ? ProjectBoardDocument() : FountainDocument()
         try document.read(from: url, ofType: typeName)
         document.fileURL = url
         document.fileType = typeName
@@ -209,6 +245,9 @@ final class ActDocumentController: NSDocumentController {
 
 @MainActor
 final class ActWindowController: NSWindowController, NSWindowDelegate {
+    func windowWillReturnUndoManager(_ window: NSWindow) -> UndoManager? {
+        (document as? FountainDocument)?.workspaceUndoManager
+    }
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         (document as? FountainDocument)?.confirmShotClosure() ?? true
     }

@@ -129,6 +129,20 @@ final class ShotWorkspaceModel: ObservableObject {
         } catch { self.error = error.localizedDescription }
     }
 
+    func openLinked(_ url: URL) throws {
+        guard !isGenerating, !isDownloading, !isDirty else {
+            throw DocumentError.externalChange
+        }
+        let data = try Data(contentsOf: url)
+        let loaded = try ShotListStore.decode(data)
+        restoring = true
+        list = loaded
+        restoring = false
+        fileURL = url; baseline = data; isDirty = false
+        status = "Opened \(url.lastPathComponent)"
+        persistRecovery()
+    }
+
     func chooseModel() {
         let panel = NSOpenPanel()
         panel.title = "Choose a GGUF model"
