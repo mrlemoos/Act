@@ -177,6 +177,14 @@ struct ScreenplayEditor: NSViewRepresentable {
                         storage.addAttribute(.foregroundColor, value: NSColor.secondaryLabelColor, range: element.range)
                     }
                     applyEmphasis(in: element.range, storage: storage, baseFont: font)
+                    if element.kind == .titlePage, element.text.first?.isWhitespace != true {
+                        let text = element.text as NSString
+                        let colon = text.range(of: ":")
+                        if colon.location != NSNotFound {
+                            let label = NSRange(location: element.range.location, length: NSMaxRange(colon))
+                            storage.addAttribute(.foregroundColor, value: NSColor.secondaryLabelColor, range: label)
+                        }
+                    }
                     if !NSLocationInRange(cursor, element.range) {
                         fadeMarkers(in: element.range, storage: storage)
                     }
