@@ -12,7 +12,8 @@
     "spec",
     "breakdown",
     "find-rc",
-    "unit-test"
+    "unit-test",
+    "behavioural-test"
   ],
   "cadence": "batch",
   "hooks": true
