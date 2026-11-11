@@ -35,8 +35,8 @@ struct WorkspaceView: View {
                     .accessibilityLabel("Toggle scene outline")
                 Spacer()
                 Picker("Workspace", selection: $workspace) {
-                    Text("Board").tag(WorkspaceSection.board)
                     Text("Screenplay").tag(WorkspaceSection.screenplay)
+                    Text("Board").tag(WorkspaceSection.board)
                     Text("Shot list").tag(WorkspaceSection.shots)
                     Text("Characters").tag(WorkspaceSection.characters)
                 }.pickerStyle(.segmented).labelsHidden().frame(width: 380)
