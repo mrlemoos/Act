@@ -80,7 +80,22 @@ struct EditorPerformanceTests {
             samples.append(Self.milliseconds { host.textView.insertText("a", replacementRange: host.textView.selectedRange()) })
             host.document.undoManager?.endUndoGrouping()
         }
-        #expect(Self.median(samples) < 60, "Keystroke took \(samples.map { Int($0) }) ms")
+        #expect(Self.median(samples) < 10, "Keystroke took \(samples.map { Int($0) }) ms")
+    }
+
+    @Test func returnCommitsALineInAFeatureLengthScriptQuickly() throws {
+        let source = Self.featureLength
+        let host = try TestEditorHost(source: source)
+        defer { host.close() }
+        host.textView.setSelectedRange(NSRange(location: (source as NSString).length / 2, length: 0))
+        TestEditorHost.pump()
+        var samples: [Double] = []
+        for _ in 0..<5 {
+            host.document.undoManager?.beginUndoGrouping()
+            samples.append(Self.milliseconds { _ = host.coordinator.textView(host.textView, doCommandBy: #selector(NSTextView.insertNewline(_:))) })
+            host.document.undoManager?.endUndoGrouping()
+        }
+        #expect(Self.median(samples) < 60, "Return took \(samples.map { Int($0) }) ms")
     }
 
     @Test func movingTheCaretInAFeatureLengthScriptStaysResponsive() throws {
@@ -93,7 +108,7 @@ struct EditorPerformanceTests {
             let location = ns.range(of: "MARA", range: NSRange(location: ns.length / 3 + index * 1500, length: 1500)).location
             samples.append(Self.milliseconds { host.textView.setSelectedRange(NSRange(location: location, length: 0)) })
         }
-        #expect(Self.median(samples) < 30, "Caret move took \(samples.map { Int($0) }) ms")
+        #expect(Self.median(samples) < 15, "Caret move took \(samples.map { Int($0) }) ms")
     }
 
     @Test(arguments: [false, true]) func workspaceTypingDoesNotReparsePerView(outline: Bool) throws {
@@ -121,6 +136,6 @@ struct EditorPerformanceTests {
             document.undoManager?.endUndoGrouping()
             TestEditorHost.pump()
         }
-        #expect(Self.median(samples) < 80, "Workspace keystroke took \(samples.map { Int($0) }) ms")
+        #expect(Self.median(samples) < 40, "Workspace keystroke took \(samples.map { Int($0) }) ms")
     }
 }

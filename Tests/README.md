@@ -33,6 +33,8 @@ Current suite: 93 core tests and 32 native app tests. The character-sheet valida
 | Offline MLX arguments, literal prompts, raster validation and subprocess-group cancellation | CharacterSheetTests |
 | Native highlight/source/caret/undo preservation, portable libraries, prompts and Save As | CharacterWorkspaceTests |
 | Source changes during extraction preserve previous details and edited prompts | CharacterWorkspaceTests |
+| Per-line styling commits on Return, line change and focus loss; only changed lines restyle ([ADR 0001](../docs/adr/0001-line-scoped-editor-styling.md)) | LineStylingTests |
+| Feature-length typing, Return, caret and workspace timing budgets | EditorPerformanceTests |
 
 The tests make assertions against saved bytes, native document state, attributed text and glyph bounds. Live example tests compare renders before and after each style change within the same run, using the actual observed view. They use no stored snapshot goldens or implementation-source comparisons.
 
