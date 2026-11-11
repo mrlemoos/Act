@@ -30,6 +30,7 @@ final class CharacterWorkspaceModel: ObservableObject {
     @Published private(set) var directory: URL?
     private var baseline: Data?
     private var source = ""
+    private var cachedScreenplay: FountainScreenplay?
     private var restoring = false
     private var loadFailed = false
     private var task: Task<Void, Never>?
@@ -49,6 +50,13 @@ final class CharacterWorkspaceModel: ObservableObject {
     var availableAgents: [ImageAgentConnection] { connections.filter(\.canGenerate) }
     var selectedCharacter: CharacterReference? { library.characters.first { $0.id == selectedID } }
     var selectedConnection: ImageAgentConnection? { availableAgents.first { $0.agent == selectedAgent } }
+
+    func parsedScreenplay(for source: String) -> FountainScreenplay {
+        if let cachedScreenplay, cachedScreenplay.source == source { return cachedScreenplay }
+        let screenplay = FountainParser.parse(source)
+        cachedScreenplay = screenplay
+        return screenplay
+    }
 
     func prepare(screenplayURL: URL?, source: String) {
         guard let screenplayURL else { self.source = source; return }
@@ -95,7 +103,8 @@ final class CharacterWorkspaceModel: ObservableObject {
         guard !isBusy, !loadFailed else { return false }
         do {
             var updated = library
-            let id = try updated.mark(source: source, selection: selection, characterID: characterID)
+            let id = try updated.mark(source: source, selection: selection, characterID: characterID,
+                                      screenplay: parsedScreenplay(for: source))
             library = updated; selectedID = id
             save()
             status = L10n.string("Character marked. Extract physical details when ready.", table: "Characters")

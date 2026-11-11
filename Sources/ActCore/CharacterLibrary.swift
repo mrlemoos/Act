@@ -22,7 +22,7 @@ public struct CharacterActionBlock: Equatable, Sendable {
     public var range: NSRange
     public var text: String
 
-    public static func selected(in source: String, range: NSRange) throws -> Self {
+    public static func selected(in source: String, range: NSRange, screenplay: FountainScreenplay? = nil) throws -> Self {
         let raw = source as NSString
         guard range.location >= 0, range.length > 0, range.length <= 100,
               range.location <= raw.length, range.length <= raw.length - range.location else { throw CharacterSheetError.invalidSelection }
@@ -30,7 +30,9 @@ public struct CharacterActionBlock: Equatable, Sendable {
         guard name == name.trimmingCharacters(in: .whitespacesAndNewlines),
               name.unicodeScalars.contains(where: CharacterSet.letters.contains),
               !name.contains(where: \.isNewline) else { throw CharacterSheetError.invalidSelection }
-        let elements = FountainParser.parse(source).elements
+        let elements: [FountainElement]
+        if let screenplay, screenplay.source == source { elements = screenplay.elements }
+        else { elements = FountainParser.parse(source).elements }
         guard let index = elements.firstIndex(where: { $0.kind == .action && NSIntersectionRange($0.range, range) == range }) else {
             throw CharacterSheetError.invalidSelection
         }
@@ -158,8 +160,8 @@ public struct CharacterLibrary: Codable, Equatable, Sendable {
     public init() {}
 
     @discardableResult
-    public mutating func mark(source: String, selection: NSRange, characterID: UUID? = nil) throws -> UUID {
-        let block = try CharacterActionBlock.selected(in: source, range: selection)
+    public mutating func mark(source: String, selection: NSRange, characterID: UUID? = nil, screenplay: FountainScreenplay? = nil) throws -> UUID {
+        let block = try CharacterActionBlock.selected(in: source, range: selection, screenplay: screenplay)
         guard !characters.flatMap(\.marks).contains(where: { !$0.isDetached && $0.nameRange == selection }) else {
             throw CharacterSheetError.operation(L10n.string("This occurrence is already marked.", table: "Characters"))
         }

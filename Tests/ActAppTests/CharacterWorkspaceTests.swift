@@ -6,6 +6,93 @@ import Testing
 
 @Suite(.serialized) @MainActor
 struct CharacterWorkspaceTests {
+    @Test func characterMenuOnlyChangesMarkedAttributesIncludingSwiftUIRefresh() throws {
+        let source = "INT. ROOM - DAY\n\nORLEANS has calloused hands.\n\n" + String(repeating: "A quiet room.\n\n", count: 500)
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let host = try TestEditorHost(source: source)
+        defer { host.close() }
+        host.document.fileURL = directory.appendingPathComponent("Draft.fountain")
+        let range = (source as NSString).range(of: "ORLEANS")
+        host.textView.setSelectedRange(range)
+        TestEditorHost.pump()
+        let storage = try #require(host.textView.textStorage)
+        let recorder = CharacterAttributeRecorder()
+        storage.delegate = recorder
+        defer { storage.delegate = nil }
+        let text = try #require(host.textView as? ScreenplayTextView)
+        text.markCharacter(NSMenuItem())
+        TestEditorHost.pump()
+        #expect(!recorder.ranges.isEmpty)
+        #expect(recorder.ranges.allSatisfy { NSIntersectionRange($0, range) == $0 })
+        #expect(storage.attribute(.backgroundColor, at: range.location, effectiveRange: nil) != nil)
+        #expect(host.document.source == source)
+        #expect(host.textView.selectedRange() == range)
+        #expect(host.document.undoManager?.canUndo == false)
+    }
+
+    @Test func removingCharacterHighlightRestoresUnderlyingFormatting() throws {
+        let source = "INT. ROOM - DAY\n\n_ORLEANS_ waits.\n\nORLEANS returns."
+        let host = try TestEditorHost(source: source)
+        defer { host.close() }
+        let range = (source as NSString).range(of: "ORLEANS")
+        host.textView.setSelectedRange(range)
+        let storage = try #require(host.textView.textStorage)
+        let original = storage.attribute(.foregroundColor, at: range.location, effectiveRange: nil) as? NSColor
+        #expect(host.document.characterWorkspace.mark(selection: range))
+        host.coordinator.format()
+        let id = try #require(host.document.characterWorkspace.selectedID)
+        let second = (source as NSString).range(of: "ORLEANS", options: .backwards)
+        #expect(host.document.characterWorkspace.mark(selection: second, characterID: id))
+        host.coordinator.format()
+        #expect(storage.attribute(.backgroundColor, at: second.location, effectiveRange: nil) != nil)
+        host.document.characterWorkspace.library.characters[0].marks[0].isDetached = true
+        host.coordinator.format()
+        #expect(storage.attribute(.backgroundColor, at: range.location, effectiveRange: nil) == nil)
+        #expect(storage.attribute(.toolTip, at: range.location, effectiveRange: nil) == nil)
+        #expect(storage.attribute(.foregroundColor, at: range.location, effectiveRange: nil) as? NSColor == original)
+        #expect(storage.attribute(.underlineStyle, at: range.location, effectiveRange: nil) as? Int == NSUnderlineStyle.single.rawValue)
+        #expect(storage.attribute(.backgroundColor, at: second.location, effectiveRange: nil) != nil)
+    }
+
+    @Test func benchmarkCharacterMenuWhenScreenplayConfigured() throws {
+        guard let path = ProcessInfo.processInfo.environment["ACT_CHARACTER_BENCHMARK_SOURCE"] else { return }
+        let input = URL(fileURLWithPath: path)
+        let source = try String(contentsOf: input, encoding: .utf8)
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let screenplay = directory.appendingPathComponent("Benchmark.fountain")
+        let originalLibrary = CharacterLibraryStore.directory(for: input)
+        if FileManager.default.fileExists(atPath: originalLibrary.path) {
+            try FileManager.default.copyItem(at: originalLibrary, to: CharacterLibraryStore.directory(for: screenplay))
+        }
+        let host = try TestEditorHost(source: source)
+        defer { host.close() }
+        host.document.fileURL = screenplay
+        let model = host.document.characterWorkspace
+        let parsed = model.parsedScreenplay(for: source)
+        let marked = model.library.characters.flatMap(\.marks).map(\.nameRange)
+        let range = try #require(parsed.elements.lazy.filter { $0.kind == .action }.compactMap { element -> NSRange? in
+            guard let word = element.text.split(whereSeparator: \.isWhitespace).first else { return nil }
+            let local = (element.text as NSString).range(of: String(word))
+            let candidate = NSRange(location: element.range.location + local.location, length: local.length)
+            guard !marked.contains(candidate), (try? CharacterActionBlock.selected(in: source, range: candidate, screenplay: parsed)) != nil else { return nil }
+            return candidate
+        }.first)
+        host.textView.setSelectedRange(range)
+        TestEditorHost.pump()
+        let text = try #require(host.textView as? ScreenplayTextView)
+        let before = model.library.characters.count
+        let clock = ContinuousClock()
+        let start = clock.now
+        text.markCharacter(NSMenuItem())
+        let elapsed = start.duration(to: clock.now)
+        TestEditorHost.pump()
+        #expect(model.library.characters.count == before + 1)
+        #expect(host.document.source == source)
+        print("Character menu, \(source.utf8.count) source bytes, \(before) existing characters: \(elapsed)")
+    }
+
     @Test func nativeMarkPersistsColourWithoutChangingSourceCaretOrUndo() throws {
         let source = "INT. ROOM - DAY\r\n\r\nA man with calloused hands is ORLEANS."
         let directory = try temporaryDirectory()
@@ -177,5 +264,17 @@ struct CharacterWorkspaceTests {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("ActCharacterAppTests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
+    }
+}
+
+@MainActor
+private final class CharacterAttributeRecorder: NSObject, NSTextStorageDelegate {
+    var ranges: [NSRange] = []
+
+    nonisolated func textStorage(_ textStorage: NSTextStorage, didProcessEditing editedMask: NSTextStorageEditActions,
+                                range editedRange: NSRange, changeInLength delta: Int) {
+        MainActor.assumeIsolated {
+            if editedMask.contains(.editedAttributes) { ranges.append(editedRange) }
+        }
     }
 }

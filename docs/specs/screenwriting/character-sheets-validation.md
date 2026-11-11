@@ -29,6 +29,10 @@ This confirms actual MLX execution and evidence validation for the example. It d
 
 ## Native rendering and package
 
+Character-menu performance regression coverage observes actual `NSTextStorage` edits through the menu handler and subsequent SwiftUI refresh. Adding a mark must change attributes only inside the selected name. Linked occurrences retain their colour; detaching a mark restores its underlying foreground colour and preserves emphasis. Cached selection tests reject a parsed screenplay whose source no longer matches.
+
+The native benchmark on a disposable copy of a 115,951-byte screenplay with 15 existing characters measured 15.7 ms in the synchronous menu handler in a debug build. This includes marking, persistence and immediate highlighting, but excludes host setup and deferred SwiftUI updates. It is a local measurement, not an end-to-end latency guarantee. Run with `ACT_CHARACTER_BENCHMARK_SOURCE=/absolute/path/Draft.fountain swift test --filter benchmarkCharacterMenuWhenScreenplayConfigured`. The benchmark copies the character library into a temporary directory and leaves the original untouched.
+
 Rendered and visually inspected the actual SwiftUI workspace and AppKit editor in hidden native test windows:
 
 - `.scratch/character-sheets-preview/characters-light.png`, 1,280-point workspace.

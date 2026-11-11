@@ -5,6 +5,21 @@ import AppKit
 final class CharacterSheetTests: XCTestCase {
     let action = "An orange flick cuts through the pure darkness. The flame burns between calloused fingers.\r\nThe man holding the cigarette is ORLEANS, a man who would blend into the crowd on a normal Tuesday, but now it is clear that he is the boss."
 
+    func testCachedSelectionMatchesFreshParsingAndRejectsStaleDialogueClassification() throws {
+        let source = "ORLEANS waits.\n\nORLEANS has grey hair."
+        let parsed = FountainParser.parse(source)
+        let range = (source as NSString).range(of: "ORLEANS", options: .backwards)
+        XCTAssertEqual(try CharacterActionBlock.selected(in: source, range: range, screenplay: parsed),
+                       try CharacterActionBlock.selected(in: source, range: range))
+        var library = CharacterLibrary()
+        let id = try library.mark(source: source, selection: NSRange(location: 0, length: 7), screenplay: parsed)
+        try library.mark(source: source, selection: range, characterID: id, screenplay: parsed)
+        XCTAssertEqual(library.characters[0].marks.count, 2)
+        let changed = "ORLEANS\nWait."
+        XCTAssertThrowsError(try CharacterActionBlock.selected(in: changed, range: NSRange(location: 0, length: 7), screenplay: parsed))
+        XCTAssertThrowsError(try library.mark(source: changed, selection: NSRange(location: 0, length: 7), screenplay: parsed))
+    }
+
     func testManualSelectionCapturesOnlyContainingActionParagraphWithoutChangingFountain() throws {
         let source = "INT. CAFÉ - NIGHT\r\n\r\n\(action)\r\n\r\nAnother paragraph.\r\n\r\nORLEANS\r\nLeave."
         let selected = (source as NSString).range(of: "ORLEANS")

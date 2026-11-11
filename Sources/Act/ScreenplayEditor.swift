@@ -94,6 +94,21 @@ struct ScreenplayEditor: NSViewRepresentable {
         weak var textView: NSTextView?
         var lastSelectionRequest: UUID
         private var isFormatting = false
+        private var formattedSource: String?
+        private var formattedSettings: ScreenplaySettings?
+        private var formattedSourceMode = false
+        private var formattedWidth: CGFloat?
+        private var formattedCursorElement: NSRange?
+        private struct Highlight: Equatable {
+            let range: NSRange
+            let colourIndex: Int
+            let name: String
+        }
+        private struct AppliedHighlight {
+            let highlight: Highlight
+            let underlying: [(NSRange, [NSAttributedString.Key: Any])]
+        }
+        private var appliedHighlights: [AppliedHighlight] = []
         init(_ parent: ScreenplayEditor) {
             self.parent = parent
             self.lastSelectionRequest = parent.selectionRequest
@@ -125,6 +140,19 @@ struct ScreenplayEditor: NSViewRepresentable {
             guard !isFormatting, let textView, !textView.hasMarkedText(), let storage = textView.textStorage else { return }
             isFormatting = true
             defer { isFormatting = false }
+            let source = textView.string
+            let script = parent.sourceMode ? nil : parent.characters.parsedScreenplay(for: source)
+            let cursor = textView.selectedRange().location
+            let cursorElement = script?.elements.first { NSLocationInRange(cursor, $0.range) }?.range
+            let columnWidth = textView.textContainer?.containerSize.width ?? 624
+            if formattedSource == source, formattedSettings == parent.settings,
+               formattedSourceMode == parent.sourceMode, formattedWidth == columnWidth,
+               formattedCursorElement == cursorElement {
+                let typingAttributes = textView.typingAttributes
+                updateCharacterHighlights(storage)
+                textView.typingAttributes = typingAttributes
+                return
+            }
             let full = NSRange(location: 0, length: storage.length)
             let font = parent.resolvedFont
             let screenplayTextView = textView as? ScreenplayTextView
@@ -134,11 +162,9 @@ struct ScreenplayEditor: NSViewRepresentable {
             base.paragraphSpacing = 0
             storage.beginEditing()
             storage.setAttributes([.font: font, .foregroundColor: NSColor.textColor, .paragraphStyle: base], range: full)
-            if !parent.sourceMode {
-                let script = FountainParser.parse(textView.string)
-                let cursor = textView.selectedRange().location
+            appliedHighlights = []
+            if let script {
                 let characterCues = ScreenplayPresentation.characterCues(in: script, settings: parent.settings)
-                let columnWidth = textView.textContainer?.containerSize.width ?? 624
                 let missingBlankLines = ScreenplayPresentation.missingBlankLinesBeforeSluglines(in: script, settings: parent.settings)
                 let lineHeight = (textView.layoutManager?.defaultLineHeight(for: font) ?? (font.ascender - font.descender + font.leading)) + base.lineSpacing
                 for element in script.elements {
@@ -191,16 +217,45 @@ struct ScreenplayEditor: NSViewRepresentable {
                 }
                 collapseSurplusBlankLines(in: script, storage: storage, font: font)
             }
-            for character in parent.characters.library.characters {
-                for mark in character.marks where !mark.isDetached && mark.nameRange.location >= 0 && NSMaxRange(mark.nameRange) <= storage.length {
-                    storage.addAttribute(.backgroundColor, value: CharacterColours.colour(character.colourIndex).withAlphaComponent(0.18), range: mark.nameRange)
-                    storage.addAttribute(.foregroundColor, value: CharacterColours.colour(character.colourIndex), range: mark.nameRange)
-                    storage.addAttribute(.toolTip, value: L10n.format("Character: %@", character.name, table: "Writing"), range: mark.nameRange)
-                }
-            }
+            updateCharacterHighlights(storage)
             storage.endEditing()
             screenplayTextView?.needsDisplay = true
             textView.typingAttributes = [.font: font, .foregroundColor: NSColor.textColor, .paragraphStyle: base]
+            formattedSource = source
+            formattedSettings = parent.settings
+            formattedSourceMode = parent.sourceMode
+            formattedWidth = columnWidth
+            formattedCursorElement = cursorElement
+        }
+
+        private func updateCharacterHighlights(_ storage: NSTextStorage) {
+            let highlights = parent.characters.library.characters.flatMap { character in
+                character.marks.compactMap { mark -> Highlight? in
+                    guard !mark.isDetached, mark.nameRange.location >= 0, mark.nameRange.length > 0,
+                          NSMaxRange(mark.nameRange) <= storage.length else { return nil }
+                    return Highlight(range: mark.nameRange, colourIndex: character.colourIndex, name: character.name)
+                }
+            }
+            guard highlights != appliedHighlights.map(\.highlight) else { return }
+            let keys: Set<NSAttributedString.Key> = [.foregroundColor, .backgroundColor, .toolTip]
+            storage.beginEditing()
+            for applied in appliedHighlights {
+                for (range, attributes) in applied.underlying {
+                    for key in keys { storage.removeAttribute(key, range: range) }
+                    storage.addAttributes(attributes, range: range)
+                }
+            }
+            appliedHighlights = highlights.map { highlight in
+                var underlying: [(NSRange, [NSAttributedString.Key: Any])] = []
+                storage.enumerateAttributes(in: highlight.range) { attributes, range, _ in
+                    underlying.append((range, attributes.filter { keys.contains($0.key) }))
+                }
+                let colour = CharacterColours.colour(highlight.colourIndex)
+                storage.addAttributes([.backgroundColor: colour.withAlphaComponent(0.18), .foregroundColor: colour,
+                                       .toolTip: L10n.format("Character: %@", highlight.name, table: "Writing")], range: highlight.range)
+                return AppliedHighlight(highlight: highlight, underlying: underlying)
+            }
+            storage.endEditing()
         }
         /// Screenplay spacing changes the presentation, never the line endings in Fountain source.
         private func collapseSurplusBlankLines(in script: FountainScreenplay, storage: NSTextStorage, font: NSFont) {
@@ -301,8 +356,9 @@ final class ScreenplayTextView: NSTextView {
 
     override func menu(for event: NSEvent) -> NSMenu? {
         let menu = super.menu(for: event) ?? NSMenu()
-        guard let document = screenplayDocument,
-              (try? CharacterActionBlock.selected(in: string, range: selectedRange())) != nil else { return menu }
+        guard let document = screenplayDocument, selectedRange().length > 0,
+              (try? CharacterActionBlock.selected(in: string, range: selectedRange(),
+                  screenplay: document.characterWorkspace.parsedScreenplay(for: string))) != nil else { return menu }
         menu.addItem(.separator())
         let create = menu.addItem(withTitle: L10n.string("Mark as New Character", table: "Writing"), action: #selector(markCharacter(_:)), keyEquivalent: "")
         create.target = self
