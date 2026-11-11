@@ -11,7 +11,8 @@
     "rubberduck",
     "spec",
     "breakdown",
-    "find-rc"
+    "find-rc",
+    "unit-test"
   ],
   "cadence": "batch",
   "hooks": true
