@@ -24,7 +24,7 @@ struct WorkspaceView: View {
     }
 
     private var screenplay: FountainScreenplay { document.screenplay }
-    private var outlineEntries: [FountainOutlineEntry] { FountainOutline.entries(in: screenplay) }
+    private var outlineEntries: [FountainOutlineEntry] { document.outline }
 
     var body: some View {
         VStack(spacing: 0) {

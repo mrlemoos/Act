@@ -34,6 +34,24 @@ struct LineStylingTests {
         #expect(host.document.source == source + "INT. ROOM - DAY\n\n")
     }
 
+    @Test func outlineFollowsCommittedLinesNotKeystrokes() throws {
+        let source = "INT. ROOM - DAY\n\nShe waits.\n\n"
+        let host = try TestEditorHost(source: source)
+        defer { host.close() }
+        #expect(host.document.outline.map(\.text) == ["INT. ROOM - DAY"])
+        host.textView.setSelectedRange(NSRange(location: (source as NSString).length, length: 0))
+        TestEditorHost.pump()
+        type("EXT. ROAD - NIGHT", in: host)
+        TestEditorHost.pump()
+        #expect(host.document.outline.count == 1)
+        host.command(#selector(NSTextView.insertNewline(_:)))
+        TestEditorHost.pump()
+        #expect(host.document.outline.count == 2)
+        while host.document.undoManager?.canUndo == true { host.undo() }
+        #expect(host.document.source == source)
+        #expect(host.document.outline.count == 1)
+    }
+
     @Test func leavingTheLineCommitsItsStyling() throws {
         let source = "She waits.\n\n"
         let host = try TestEditorHost(source: source)

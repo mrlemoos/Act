@@ -11,6 +11,8 @@ extension UTType {
 @objc(FountainDocument)
 final class FountainDocument: NSDocument, ObservableObject {
     @Published private(set) var source = ""
+    /// Refreshed when the editor commits a line, not on every keystroke. See docs/adr/0001.
+    @Published private(set) var outline: [FountainOutlineEntry] = []
     lazy var shotWorkspace = ShotWorkspaceModel()
     lazy var characterWorkspace = CharacterWorkspaceModel()
     @Published var isShotWorkspaceActive = false
@@ -71,7 +73,12 @@ final class FountainDocument: NSDocument, ObservableObject {
         requestedWorkspace == .board ? projectBoard?.undoManager : undoManager
     }
 
-    func replaceSource(_ newSource: String) {
+    func refreshOutline() {
+        let entries = FountainOutline.entries(in: screenplay)
+        if entries != outline { outline = entries }
+    }
+
+    func replaceSource(_ newSource: String, deferringOutline: Bool = false) {
         guard !source.isLiterallyEqual(to: newSource) else { return }
         let previous = source
         undoManager?.registerUndo(withTarget: self) { target in target.replaceSource(previous) }
@@ -81,6 +88,7 @@ final class FountainDocument: NSDocument, ObservableObject {
         shotWorkspace.updateScreenplaySource(newSource)
         textFile.source = newSource
         updateChangeCount(undoManager?.isUndoing == true ? .changeUndone : undoManager?.isRedoing == true ? .changeRedone : .changeDone)
+        if !deferringOutline { refreshOutline() }
     }
 
     func setPaper(_ paper: ScreenplayPaper) {
@@ -163,6 +171,7 @@ final class FountainDocument: NSDocument, ObservableObject {
             source = textFile.source
             characterWorkspace.updateSource(source)
             shotWorkspace.updateScreenplaySource(source)
+            refreshOutline()
             snapshot = DocumentFileSnapshot(data: data)
         }
     }

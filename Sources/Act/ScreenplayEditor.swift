@@ -68,6 +68,8 @@ struct ScreenplayEditor: NSViewRepresentable {
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         let coordinator = context.coordinator
         coordinator.parent = self
+        coordinator.isUpdatingView = true
+        defer { coordinator.isUpdatingView = false }
         guard let text = coordinator.textView else { return }
         var sourceChanged = false
         if !text.string.isLiterallyEqual(to: document.source) {
@@ -94,6 +96,7 @@ struct ScreenplayEditor: NSViewRepresentable {
         var lastSelectionRequest: UUID
         private var isStyling = false
         private var isApplyingSource = false
+        var isUpdatingView = false
         private var editCrossesLines = false
         private var activeLineStart: Int?
         private var styledConfiguration: Configuration?
@@ -152,7 +155,7 @@ struct ScreenplayEditor: NSViewRepresentable {
 
         func textDidChange(_ notification: Notification) {
             guard !isStyling, let textView else { return }
-            parent.document.replaceSource(textView.string)
+            parent.document.replaceSource(textView.string, deferringOutline: true)
             if editCrossesLines {
                 editCrossesLines = false
                 format()
@@ -229,6 +232,12 @@ struct ScreenplayEditor: NSViewRepresentable {
             activeLineStart = lineStart(in: textView)
             refreshTypingAttributes()
             textView.needsDisplay = true
+            if isUpdatingView {
+                // SwiftUI view updates must not publish synchronously.
+                DispatchQueue.main.async { [weak document = parent.document] in document?.refreshOutline() }
+            } else {
+                parent.document.refreshOutline()
+            }
         }
 
         private func restyleChangedLines(in textView: NSTextView, storage: NSTextStorage, font: NSFont, base: NSParagraphStyle, columnWidth: CGFloat) {

@@ -136,6 +136,6 @@ struct EditorPerformanceTests {
             document.undoManager?.endUndoGrouping()
             TestEditorHost.pump()
         }
-        #expect(Self.median(samples) < 40, "Workspace keystroke took \(samples.map { Int($0) }) ms")
+        #expect(Self.median(samples) < 10, "Workspace keystroke took \(samples.map { Int($0) }) ms")
     }
 }

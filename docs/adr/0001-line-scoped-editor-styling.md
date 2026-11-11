@@ -23,8 +23,9 @@ Character highlights and CONT'D annotations were tracked in coordinator arrays k
    - the editor resigns first responder or its window resigns key, which covers switching to another app;
    - the source is replaced outside typing (undo, redo, paper size), settings, column width or source mode change.
 3. A commit reparses the script and compares each element's presentation (kind, text, CONT'D suffix, slugline spacing, blank-line collapse, marker fading) with the presentation last applied. Only elements whose presentation changed are restyled. In practice this is the edited line and the line the caret left or entered, widened only when Fountain context changes a neighbour.
-4. Styling state lives in the text storage, so it moves with edits: character highlights carry a custom attribute and the colour they cover; CONT'D annotations are a custom attribute on the cue range, drawn from the visible range.
-5. External source replacement edits only the differing span of the text storage instead of resetting the whole string, so undo and redo restyle incrementally too.
+4. The outline sidebar reads entries the document publishes at load, on non-typing source changes and on each commit, so typing does not reparse the script for it.
+5. Styling state lives in the text storage, so it moves with edits: character highlights carry a custom attribute and the colour they cover; CONT'D annotations are a custom attribute on the cue range, drawn from the visible range.
+6. External source replacement edits only the differing span of the text storage instead of resetting the whole string, so undo and redo restyle incrementally too.
 
 ## Alternatives
 
@@ -44,7 +45,7 @@ Parse only the changed region. Not chosen now: commits are rare, and a full pars
 
 - Keystrokes inside a line no longer parse or restyle the script; cost no longer scales with styling work.
 - While typing, the current line can briefly show stale formatting (for example a new slugline is not bold) until Return or focus loss. This is intentional and matches Slugline.
-- The outline sidebar still reparses on each keystroke when open, through the shared parse cache. Follow-up if it becomes visible.
+- The outline follows committed lines, not keystrokes: the document publishes outline entries on load, on non-typing source changes (undo, redo, paper size) and on each editor commit. A heading typed but not yet committed appears in the outline on Return or focus loss.
 - Highlight and annotation code must keep reading from text attributes; reintroducing range arrays would reintroduce stale ranges.
 
 ## Evidence
