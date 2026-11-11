@@ -115,6 +115,41 @@ struct LineStylingTests {
         #expect(headIndent(host, at: cue.location) > headIndent(host, at: line.location))
     }
 
+    private func press(_ characters: String, keyCode: UInt16 = 0, in host: TestEditorHost) {
+        let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: host.window.windowNumber,
+                                     context: nil, characters: characters, charactersIgnoringModifiers: characters, isARepeat: false, keyCode: keyCode)!
+        host.document.undoManager?.beginUndoGrouping()
+        host.textView.keyDown(with: event)
+        host.document.undoManager?.endUndoGrouping()
+        TestEditorHost.pump()
+    }
+
+    @Test func typedKeyEventsIndentACueAndDialogueOnReturn() throws {
+        let source = "She waits."
+        let host = try TestEditorHost(source: source)
+        defer { host.close() }
+        host.window.makeFirstResponder(host.textView)
+        host.textView.setSelectedRange(NSRange(location: (source as NSString).length, length: 0))
+        TestEditorHost.pump()
+        press("\r", keyCode: 36, in: host)
+        for character in "MARA" { press(String(character), in: host) }
+        press("\r", keyCode: 36, in: host)
+        for character in "Hello there." { press(String(character), in: host) }
+        press("\r", keyCode: 36, in: host)
+        let text = host.textView.string as NSString
+        #expect(text as String == "She waits.\n\nMARA\nHello there.\n")
+        let cue = text.range(of: "MARA").location
+        let line = text.range(of: "Hello there.").location
+        #expect(headIndent(host, at: line) > 0)
+        #expect(headIndent(host, at: cue) > headIndent(host, at: line))
+        let layout = try #require(host.textView.layoutManager)
+        func laidOutX(_ location: Int) -> CGFloat {
+            layout.lineFragmentUsedRect(forGlyphAt: layout.glyphIndexForCharacter(at: location), effectiveRange: nil).minX
+        }
+        #expect(laidOutX(cue) >= headIndent(host, at: cue), "Cue laid out at \(laidOutX(cue))")
+        #expect(laidOutX(line) >= headIndent(host, at: line), "Dialogue laid out at \(laidOutX(line))")
+    }
+
     @Test func continuationAnnotationsFollowEditsBeforeThem() throws {
         let source = "INT. ROOM - DAY\n\nMARA\nOne.\n\nShe waits.\n\nMARA\nTwo."
         let host = try TestEditorHost(source: source)

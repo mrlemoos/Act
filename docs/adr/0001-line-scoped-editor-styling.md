@@ -47,11 +47,13 @@ Parse only the changed region. Not chosen now: commits are rare, and a full pars
 - While typing, the current line can briefly show stale formatting (for example a new slugline is not bold) until Return or focus loss. This is intentional and matches Slugline.
 - The outline follows committed lines, not keystrokes: the document publishes outline entries on load, on non-typing source changes (undo, redo, paper size) and on each editor commit. A heading typed but not yet committed appears in the outline on Return or focus loss.
 - Highlight and annotation code must keep reading from text attributes; reintroducing range arrays would reintroduce stale ranges.
+- Commits triggered by a line-break edit run inside the text view's edit notifications, where attribute changes do not reach the layout manager. Each commit invalidates layout and display for the ranges it restyles; without that, a new cue keeps its old indent on screen until something else relays it out.
 
 ## Evidence
 
 - Release timings on Port of Ambitions before this decision: 113 ms per keystroke, 220 ms with outline; after constant-factor fixes: 25 ms and 27 ms.
 - Release timings on the same script after this decision: 3 ms per keystroke (13 ms with outline open), 19-24 ms per Return, 2-3 ms per caret move to another line.
+- Built release app, 124-character typing burst mid-script with the outline open: the build before this decision fell 21-23 s behind (about 170 ms per key); after it, text caught up 50-90 ms after the last key.
 - Regression tests: `Tests/ActAppTests/EditorPerformanceTests.swift`, `Tests/ActAppTests/LineStylingTests.swift`.
 
 ## Linked specs

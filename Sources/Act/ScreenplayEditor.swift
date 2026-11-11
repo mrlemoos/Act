@@ -224,14 +224,25 @@ struct ScreenplayEditor: NSViewRepresentable {
                 styled = []
                 styledConfiguration = configuration
             }
+            var restyled: [NSRange] = []
             if !parent.sourceMode {
-                restyleChangedLines(in: textView, storage: storage, font: font, base: base, columnWidth: configuration.width)
+                restyled = restyleChangedLines(in: textView, storage: storage, font: font, base: base, columnWidth: configuration.width)
             }
             updateCharacterHighlights(storage)
             storage.endEditing()
+            // Commits often run inside the text view's own edit notifications, where attribute
+            // changes are not reported to the layout manager.
+            if let layoutManager = textView.layoutManager {
+                for range in restyled where NSMaxRange(range) <= storage.length {
+                    layoutManager.invalidateLayout(forCharacterRange: range, actualCharacterRange: nil)
+                    layoutManager.invalidateDisplay(forCharacterRange: range)
+                }
+            }
             activeLineStart = lineStart(in: textView)
             refreshTypingAttributes()
             textView.needsDisplay = true
+            // Mid-edit commits see text the document has not received yet; the commit after it refreshes.
+            guard parent.document.source.isLiterallyEqual(to: textView.string) else { return }
             if isUpdatingView {
                 // SwiftUI view updates must not publish synchronously.
                 DispatchQueue.main.async { [weak document = parent.document] in document?.refreshOutline() }
@@ -240,7 +251,7 @@ struct ScreenplayEditor: NSViewRepresentable {
             }
         }
 
-        private func restyleChangedLines(in textView: NSTextView, storage: NSTextStorage, font: NSFont, base: NSParagraphStyle, columnWidth: CGFloat) {
+        private func restyleChangedLines(in textView: NSTextView, storage: NSTextStorage, font: NSFont, base: NSParagraphStyle, columnWidth: CGFloat) -> [NSRange] {
             let source = textView.string
             let script = parent.characters.parsedScreenplay(for: source)
             let cursor = textView.selectedRange().location
@@ -261,14 +272,18 @@ struct ScreenplayEditor: NSViewRepresentable {
             let offset = styled.count - desired.count
             let lineHeight = (textView.layoutManager?.defaultLineHeight(for: font) ?? (font.ascender - font.descender + font.leading)) + base.lineSpacing
             let ns = source as NSString
+            var restyled: [NSRange] = []
             for (index, element) in script.elements.enumerated() {
                 let unchanged = index < prefix ? styled[index] == desired[index]
                     : index >= desired.count - suffix ? styled[index + offset] == desired[index] : false
                 guard !unchanged else { continue }
-                style(element, as: desired[index], source: source, lineRange: ns.lineRange(for: element.range), storage: storage,
+                let lineRange = ns.lineRange(for: element.range)
+                style(element, as: desired[index], source: source, lineRange: lineRange, storage: storage,
                       font: font, base: base, columnWidth: columnWidth, lineHeight: lineHeight)
+                restyled.append(lineRange)
             }
             styled = desired
+            return restyled
         }
 
         private func continuation(for element: FountainElement, cues: [Int: String]) -> String? {
