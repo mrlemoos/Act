@@ -14,7 +14,8 @@
     "find-rc",
     "unit-test",
     "behavioural-test",
-    "e2e-test"
+    "e2e-test",
+    "commit"
   ],
   "cadence": "batch",
   "hooks": true
