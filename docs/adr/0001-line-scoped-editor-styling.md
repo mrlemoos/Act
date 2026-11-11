@@ -22,9 +22,9 @@ Character highlights and CONT'D annotations were tracked in coordinator arrays k
    - the caret moves to another paragraph;
    - the editor resigns first responder or its window resigns key, which covers switching to another app;
    - the source is replaced outside typing (undo, redo, paper size), settings, column width or source mode change.
-3. A commit reparses the script and compares each element's presentation (kind, text, CONT'D suffix, slugline spacing, blank-line collapse, marker fading) with the presentation last applied. Only elements whose presentation changed are restyled. In practice this is the edited line and the line the caret left or entered, widened only when Fountain context changes a neighbour.
+3. A commit reparses the script and aligns each element's presentation (kind, text, length, CONT'D suffix, slugline spacing, blank-line collapse, marker fading) with the presentation last applied, matching unchanged lines from the start and end of the script. Matched elements are restyled only if their presentation changed; every element between the last start match and the first end match is restyled. Elements touching the characters edited since the last commit never match from the side they were edited on, because their characters may carry another line's attributes (for example, deleting up to a repeated cue leaves the second cue's CONT'D on the surviving text). In practice this is the edited line and the line the caret left or entered, widened when Fountain context changes a neighbour or an edit spans several lines.
 4. The outline sidebar reads entries the document publishes at load, on non-typing source changes and on each commit, so typing does not reparse the script for it.
-5. Styling state lives in the text storage, so it moves with edits: character highlights carry a custom attribute and the colour they cover; CONT'D annotations are a custom attribute on the cue range, drawn from the visible range.
+5. Styling state lives in the text storage, so it moves with edits: character highlights carry a custom attribute and the colour they cover; CONT'D annotations are a custom attribute on the cue range, drawn from the visible range. Highlights refresh on each commit and whenever the character library revision changes, without restyling lines.
 6. External source replacement edits only the differing span of the text storage instead of resetting the whole string, so undo and redo restyle incrementally too.
 
 ## Alternatives
@@ -47,6 +47,9 @@ Parse only the changed region. Not chosen now: commits are rare, and a full pars
 - While typing, the current line can briefly show stale formatting (for example a new slugline is not bold) until Return or focus loss. This is intentional and matches Slugline.
 - The outline follows committed lines, not keystrokes: the document publishes outline entries on load, on non-typing source changes (undo, redo, paper size) and on each editor commit. A heading typed but not yet committed appears in the outline on Return or focus loss.
 - Highlight and annotation code must keep reading from text attributes; reintroducing range arrays would reintroduce stale ranges.
+- An edit spanning distant lines, such as Replace All touching the first and last lines, restyles everything between them.
+- A commit requested while input-method text is marked (composition, dead keys) is skipped, not queued. The next commit catches up because it compares against the presentations last applied.
+- Settings, source mode and column width changes reset and restyle the whole script, so each live-resize step that changes the column width costs a full restyle.
 - Commits triggered by a line-break edit run inside the text view's edit notifications, where attribute changes do not reach the layout manager. Each commit invalidates layout and display for the ranges it restyles; without that, a new cue keeps its old indent on screen until something else relays it out.
 
 ## Evidence

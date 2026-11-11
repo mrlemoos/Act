@@ -58,6 +58,7 @@ struct ScreenplayEditor: NSViewRepresentable {
         text.delegate = context.coordinator
         text.setAccessibilityLabel(L10n.string("Screenplay editor", table: "Writing"))
         text.string = document.source
+        text.textStorage?.delegate = context.coordinator
         scroll.documentView = text
         context.coordinator.textView = text
         scroll.onColumnWidthChange = { [weak coordinator = context.coordinator] in coordinator?.format() }
@@ -85,12 +86,13 @@ struct ScreenplayEditor: NSViewRepresentable {
             }
         }
         if sourceChanged || coordinator.configurationChanged { coordinator.format() }
+        else if coordinator.highlightedRevision != characters.revision { coordinator.refreshHighlights() }
     }
 
     /// Styling is committed per line: on line breaks, when the caret leaves its line, and when the
     /// editor loses focus. Typing inside a line never restyles the script. See docs/adr/0001.
     @MainActor
-    final class Coordinator: NSObject, NSTextViewDelegate {
+    final class Coordinator: NSObject, NSTextViewDelegate, @preconcurrency NSTextStorageDelegate {
         var parent: ScreenplayEditor
         weak var textView: NSTextView?
         var lastSelectionRequest: UUID
@@ -101,6 +103,9 @@ struct ScreenplayEditor: NSViewRepresentable {
         private var activeLineStart: Int?
         private var styledConfiguration: Configuration?
         private var styled: [Presentation] = []
+        /// Characters edited since the last commit. Elements touching it never match old presentations by position.
+        private var edited: NSRange?
+        private(set) var highlightedRevision: Int?
 
         private struct Configuration: Equatable {
             let settings: ScreenplaySettings
@@ -151,6 +156,17 @@ struct ScreenplayEditor: NSViewRepresentable {
                 editCrossesLines = true
             }
             return true
+        }
+
+        func textStorage(_ textStorage: NSTextStorage, didProcessEditing editedMask: NSTextStorageEditActions, range editedRange: NSRange, changeInLength delta: Int) {
+            guard editedMask.contains(.editedCharacters) else { return }
+            guard let previous = edited else { edited = editedRange; return }
+            let replacedEnd = NSMaxRange(editedRange) - delta
+            func shifted(_ location: Int) -> Int {
+                location <= editedRange.location ? location : location >= replacedEnd ? location + delta : NSMaxRange(editedRange)
+            }
+            let start = min(shifted(previous.location), editedRange.location)
+            edited = NSRange(location: start, length: max(shifted(NSMaxRange(previous)), NSMaxRange(editedRange)) - start)
         }
 
         func textDidChange(_ notification: Notification) {
@@ -230,6 +246,7 @@ struct ScreenplayEditor: NSViewRepresentable {
             }
             updateCharacterHighlights(storage)
             storage.endEditing()
+            edited = nil
             // Commits often run inside the text view's own edit notifications, where attribute
             // changes are not reported to the layout manager.
             if let layoutManager = textView.layoutManager {
@@ -251,6 +268,15 @@ struct ScreenplayEditor: NSViewRepresentable {
             }
         }
 
+        func refreshHighlights() {
+            guard !isStyling, let storage = textView?.textStorage else { return }
+            isStyling = true
+            defer { isStyling = false }
+            storage.beginEditing()
+            updateCharacterHighlights(storage)
+            storage.endEditing()
+        }
+
         private func restyleChangedLines(in textView: NSTextView, storage: NSTextStorage, font: NSFont, base: NSParagraphStyle, columnWidth: CGFloat) -> [NSRange] {
             let source = textView.string
             let script = parent.characters.parsedScreenplay(for: source)
@@ -264,14 +290,18 @@ struct ScreenplayEditor: NSViewRepresentable {
                              blankLinesBefore: element.kind == .sceneHeading ? missingBlankLines[element.range.location, default: 0] : 0,
                              collapsed: collapsed.contains(index), faded: !NSLocationInRange(cursor, element.range))
             }
+            let ns = source as NSString
+            let edited = edited ?? NSRange(location: ns.length, length: 0)
+            let elements = script.elements
             var prefix = 0
-            while prefix < styled.count, prefix < desired.count, styled[prefix].isSameLine(as: desired[prefix]) { prefix += 1 }
+            while prefix < styled.count, prefix < desired.count, NSMaxRange(ns.lineRange(for: elements[prefix].range)) <= edited.location,
+                  styled[prefix].isSameLine(as: desired[prefix]) { prefix += 1 }
             var suffix = 0
             while suffix < styled.count - prefix, suffix < desired.count - prefix,
+                  elements[desired.count - 1 - suffix].range.location >= NSMaxRange(edited),
                   styled[styled.count - 1 - suffix].isSameLine(as: desired[desired.count - 1 - suffix]) { suffix += 1 }
             let offset = styled.count - desired.count
             let lineHeight = (textView.layoutManager?.defaultLineHeight(for: font) ?? (font.ascender - font.descender + font.leading)) + base.lineSpacing
-            let ns = source as NSString
             var restyled: [NSRange] = []
             for (index, element) in script.elements.enumerated() {
                 let unchanged = index < prefix ? styled[index] == desired[index]
@@ -378,6 +408,7 @@ struct ScreenplayEditor: NSViewRepresentable {
 
         /// Highlights live in the text storage so they move with edits made between commits.
         private func updateCharacterHighlights(_ storage: NSTextStorage) {
+            highlightedRevision = parent.characters.revision
             var colours: [String: (colour: NSColor, name: String)] = [:]
             let desired = Set(parent.characters.library.characters.flatMap { character in
                 character.marks.compactMap { mark -> Highlight? in

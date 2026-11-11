@@ -161,6 +161,71 @@ struct LineStylingTests {
         #expect(text.continuations.first?.range == cue)
     }
 
+    @Test func deletingUpToARepeatedCueClearsItsStaleAnnotation() throws {
+        let source = "INT. ROOM - DAY\n\nMARA\nOne.\n\nShe waits.\n\nMARA\nOne."
+        let host = try TestEditorHost(source: source)
+        defer { host.close() }
+        let text = try #require(host.textView as? ScreenplayTextView)
+        #expect(text.continuations.map(\.text) == [" (CONT'D)"])
+        let first = (source as NSString).range(of: "MARA").location
+        let second = (source as NSString).range(of: "MARA", options: .backwards).location
+        host.insert("", selection: NSRange(location: first, length: second - first))
+        #expect(host.textView.string == "INT. ROOM - DAY\n\nMARA\nOne.")
+        #expect(text.continuations.isEmpty)
+        let style = host.textView.textStorage?.attribute(.paragraphStyle, at: first, effectiveRange: nil) as? NSParagraphStyle
+        #expect(style?.tailIndent == 0)
+    }
+
+    @Test func undoAcrossRepeatedLinesClearsStaleAnnotations() throws {
+        let source = "INT. ROOM - DAY\n\nMARA\nOne.\n\nShe waits.\n\nMARA\nOne."
+        let host = try TestEditorHost(source: source)
+        defer { host.close() }
+        let text = try #require(host.textView as? ScreenplayTextView)
+        host.insert("MARA\nOne.\n\nShe waits.\n\n", selection: NSRange(location: 17, length: 0))
+        host.textView.setSelectedRange(NSRange(location: 0, length: 0))
+        TestEditorHost.pump()
+        #expect(text.continuations.count == 2)
+        host.undo()
+        #expect(host.textView.string == source)
+        #expect(text.continuations.map(\.range) == [(source as NSString).range(of: "MARA", options: .backwards)])
+    }
+
+    @Test func replacingSeveralRangesCommitsNewLineBreaks() throws {
+        let source = "She waits.\n\nHe nods. MARA\nHello there."
+        let host = try TestEditorHost(source: source)
+        defer { host.close() }
+        let ns = source as NSString
+        let ranges = [ns.range(of: " MARA"), ns.range(of: "Hello")]
+        let replacements = ["\n\nMARA", "Hello"]
+        host.textView.setSelectedRange(NSRange(location: 0, length: 0))
+        TestEditorHost.pump()
+        host.document.undoManager?.beginUndoGrouping()
+        #expect(host.textView.shouldChangeText(inRanges: ranges.map { NSValue(range: $0) }, replacementStrings: replacements))
+        let storage = try #require(host.textView.textStorage)
+        storage.beginEditing()
+        for (range, replacement) in zip(ranges, replacements).reversed() { storage.replaceCharacters(in: range, with: replacement) }
+        storage.endEditing()
+        host.textView.didChangeText()
+        host.document.undoManager?.endUndoGrouping()
+        TestEditorHost.pump()
+        let line = (host.textView.string as NSString).range(of: "Hello there.").location
+        #expect(headIndent(host, at: line) > 0)
+    }
+
+    @Test func characterLibraryChangesRefreshHighlightsWithoutACommit() throws {
+        let source = "INT. ROOM - DAY\n\nORLEANS waits."
+        let host = try TestEditorHost(source: source)
+        defer { host.close() }
+        let range = (source as NSString).range(of: "ORLEANS")
+        let storage = try #require(host.textView.textStorage)
+        #expect(host.document.characterWorkspace.mark(selection: range))
+        TestEditorHost.pump()
+        #expect(storage.attribute(.backgroundColor, at: range.location, effectiveRange: nil) != nil)
+        host.document.characterWorkspace.library.characters[0].marks[0].isDetached = true
+        TestEditorHost.pump()
+        #expect(storage.attribute(.backgroundColor, at: range.location, effectiveRange: nil) == nil)
+    }
+
     @Test func undoRestoresStylingWithoutResettingTheScript() throws {
         let source = "She waits.\n\nINT. ROOM - DAY\n\nRain."
         let host = try TestEditorHost(source: source)
