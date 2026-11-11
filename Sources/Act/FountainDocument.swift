@@ -73,7 +73,7 @@ final class FountainDocument: NSDocument, ObservableObject {
         guard source != newSource else { return }
         let previous = source
         undoManager?.registerUndo(withTarget: self) { target in target.replaceSource(previous) }
-        undoManager?.setActionName("Writing")
+        undoManager?.setActionName(L10n.string("Writing", table: "Writing"))
         source = newSource
         characterWorkspace.updateSource(newSource)
         shotWorkspace.updateScreenplaySource(newSource)
@@ -83,7 +83,7 @@ final class FountainDocument: NSDocument, ObservableObject {
 
     func setPaper(_ paper: ScreenplayPaper) {
         replaceSource(paper.updating(source))
-        undoManager?.setActionName("Paper size")
+        undoManager?.setActionName(L10n.string("Paper size", table: "Writing"))
     }
 
     func showPDFPreview() {
@@ -127,18 +127,18 @@ final class FountainDocument: NSDocument, ObservableObject {
         characterWorkspace.save()
         guard !characterWorkspace.isDirty else {
             let alert = NSAlert()
-            alert.messageText = "Character edits could not be saved"
-            alert.informativeText = characterWorkspace.error ?? "Save your screenplay before closing to keep its character library."
+            alert.messageText = L10n.string("Character edits could not be saved", table: "Writing")
+            alert.informativeText = characterWorkspace.error ?? L10n.string("Save your screenplay before closing to keep its character library.", table: "Writing")
             alert.runModal()
             return false
         }
         guard shotWorkspace.isDirty else { shotWorkspace.cancel(); characterWorkspace.cancel(); return true }
         let alert = NSAlert()
-        alert.messageText = "Save changes to your shot list?"
-        alert.informativeText = "The shot list is saved separately from your screenplay."
-        alert.addButton(withTitle: "Save")
-        alert.addButton(withTitle: "Cancel")
-        alert.addButton(withTitle: "Close Without Saving")
+        alert.messageText = L10n.string("Save changes to your shot list?", table: "Writing")
+        alert.informativeText = L10n.string("The shot list is saved separately from your screenplay.", table: "Writing")
+        alert.addButton(withTitle: L10n.string("Save", table: "Writing"))
+        alert.addButton(withTitle: L10n.string("Cancel", table: "Writing"))
+        alert.addButton(withTitle: L10n.string("Close Without Saving", table: "Writing"))
         switch alert.runModal() {
         case .alertFirstButtonReturn:
             shotWorkspace.save()
@@ -205,8 +205,8 @@ final class FountainDocument: NSDocument, ObservableObject {
 final class ActDocumentController: NSDocumentController {
     override func openDocument(_ sender: Any?) {
         let panel = NSOpenPanel()
-        panel.title = "Open screenplay or project"
-        panel.message = "Choose a Fountain screenplay or .actboard project."
+        panel.title = L10n.string("Open screenplay or project", table: "Writing")
+        panel.message = L10n.string("Choose a Fountain screenplay or .actboard project.", table: "Writing")
         // Fountain is plain text and other editors register competing UTIs for
         // its extension. An unrestricted panel keeps those documents selectable.
         // DocumentText validates the actual bytes before a document is opened.

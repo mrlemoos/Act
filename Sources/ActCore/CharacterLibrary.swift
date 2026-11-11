@@ -5,12 +5,12 @@ public enum CharacterSheetError: LocalizedError, Sendable {
     case operation(String)
     public var errorDescription: String? {
         switch self {
-        case .invalidSelection: "Select a character name inside an action paragraph. Dialogue, comments and scene headings cannot be marked."
-        case .staleMark: "This character mark no longer matches an action paragraph. Mark the name again to relink it."
-        case .invalidExtraction: "MLX returned invalid or unsupported physical details. Existing details and your prompt are preserved."
-        case .invalidLibrary: "This character library has an unsupported version or invalid references."
-        case .externalChange: "The character library changed outside Act. Reopen the screenplay before editing it further."
-        case .missingImage: "The agent returned no new, valid image. Check its image tools and permissions, then retry."
+        case .invalidSelection: L10n.string("Select a character name inside an action paragraph. Dialogue, comments and scene headings cannot be marked.", table: "Characters")
+        case .staleMark: L10n.string("This character mark no longer matches an action paragraph. Mark the name again to relink it.", table: "Characters")
+        case .invalidExtraction: L10n.string("MLX returned invalid or unsupported physical details. Existing details and your prompt are preserved.", table: "Characters")
+        case .invalidLibrary: L10n.string("This character library has an unsupported version or invalid references.", table: "Characters")
+        case .externalChange: L10n.string("The character library changed outside Act. Reopen the screenplay before editing it further.", table: "Characters")
+        case .missingImage: L10n.string("The agent returned no new, valid image. Check its image tools and permissions, then retry.", table: "Characters")
         case .operation(let reason): reason
         }
     }
@@ -71,6 +71,21 @@ public struct PhysicalTrait: Codable, Equatable, Sendable {
     public init(attribute: String, value: String, evidence: String) {
         self.attribute = attribute; self.value = value; self.evidence = evidence
     }
+
+    /// Translates recognised interface labels while retaining extracted values and evidence verbatim.
+    public static func attributeTitle(_ attribute: String, locale: String? = nil) -> String {
+        let normalised = attribute.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let titles = ["age": "Age", "age range": "Age range", "sex": "Sex", "gender": "Gender",
+                      "height": "Height", "build": "Build", "body": "Body", "body type": "Body type",
+                      "skin": "Skin", "skin tone": "Skin tone", "complexion": "Complexion", "hair": "Hair",
+                      "hair colour": "Hair colour", "hair color": "Hair colour", "eyes": "Eyes",
+                      "eye colour": "Eye colour", "eye color": "Eye colour", "face": "Face",
+                      "facial hair": "Facial hair", "hands": "Hands", "scars": "Scars", "tattoos": "Tattoos",
+                      "clothing": "Clothing", "clothes": "Clothing", "footwear": "Footwear",
+                      "accessories": "Accessories", "physical appearance": "Physical appearance"]
+        guard let title = titles[normalised] else { return attribute }
+        return L10n.string(title, table: "Characters", locale: locale)
+    }
 }
 
 public struct CharacterMark: Codable, Identifiable, Equatable, Sendable {
@@ -116,6 +131,13 @@ public struct CharacterReference: Codable, Identifiable, Equatable, Sendable {
         }
     }
 
+    public func displayedContradictions(locale: String? = nil) -> [String] {
+        contradictions.map { conflict in
+            guard let separator = conflict.firstIndex(of: ":") else { return conflict }
+            return PhysicalTrait.attributeTitle(String(conflict[..<separator]), locale: locale) + conflict[separator...]
+        }
+    }
+
     public var suggestedPrompt: String {
         let details = Array(Set(marks.flatMap(\.traits).map { "\($0.attribute): \($0.value)" })).sorted()
         return """
@@ -139,7 +161,7 @@ public struct CharacterLibrary: Codable, Equatable, Sendable {
     public mutating func mark(source: String, selection: NSRange, characterID: UUID? = nil) throws -> UUID {
         let block = try CharacterActionBlock.selected(in: source, range: selection)
         guard !characters.flatMap(\.marks).contains(where: { !$0.isDetached && $0.nameRange == selection }) else {
-            throw CharacterSheetError.operation("This occurrence is already marked.")
+            throw CharacterSheetError.operation(L10n.string("This occurrence is already marked.", table: "Characters"))
         }
         let index: Int
         if let characterID {
@@ -207,7 +229,7 @@ public enum CharacterLibraryStore {
         try validate(library)
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(library)
-        guard data.count <= 16_777_216 else { throw CharacterSheetError.operation("The character library exceeds its 16 MB metadata limit. Save a separate screenplay copy before adding more history.") }
+        guard data.count <= 16_777_216 else { throw CharacterSheetError.operation(L10n.string("The character library exceeds its 16 MB metadata limit. Save a separate screenplay copy before adding more history.", table: "Characters")) }
         return data
     }
     public static func decode(_ data: Data) throws -> CharacterLibrary {

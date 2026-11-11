@@ -68,6 +68,18 @@ ACT_TEST_CHARACTER_PREVIEW_DIRECTORY="$PWD/.scratch/character-sheets-preview" sw
 
 Image-agent tests use local fixture subprocesses. Actual external generation and reference-image editing require explicit in-app prompt approval and result inspection for each configured account. Fixture raster output is not evidence of live agent capability.
 
+## Localisation
+
+The default suite checks all seven resource sets for matching keys, compatible format arguments, plural rules and document-type names. Native editor, board and planning tests keep user content, source bytes and persisted identifiers literal.
+
+To verify one language in a fresh test process and render its actual workspaces, settings and PDF preview:
+
+```sh
+ACT_TEST_EXPECTED_LANGUAGE=pt-BR ACT_TEST_LOCALISATION_DIRECTORY="$PWD/.scratch/localisation" swift test --filter LocalisationPresentationTests
+```
+
+Run separately for `en-GB`, `en-US`, `pt-BR`, `es-ES`, `fr-FR`, `de-DE` and `it-IT`. The harness uses temporary process preferences and restores them; it does not change saved macOS language settings. See [localisation evidence](../docs/specs/localisation/validation.md).
+
 ## Manual and untested boundaries
 
 Native crash/relaunch restoration, system input-method composition, OS file dialogs, accessibility/button/menu actions and physical keyboard shortcuts still require desktop checks. Store-level recovery and direct native editor/document APIs are tested independently. Network interruption, checksum mismatch and disk exhaustion during model download are not currently fault-injected. Distribution signing and notarisation remain outside this project phase.

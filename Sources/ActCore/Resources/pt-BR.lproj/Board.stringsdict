@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>%lld scenes</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld cena</string>
+			<key>other</key>
+			<string>%lld cenas</string>
+			<key>many</key>
+			<string>%lld cenas</string>
+		</dict>
+	</dict>
+	<key>Shared reference · %lld other drafts</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>Referência compartilhada · %lld outro rascunho</string>
+			<key>other</key>
+			<string>Referência compartilhada · %lld outros rascunhos</string>
+			<key>many</key>
+			<string>Referência compartilhada · %lld outros rascunhos</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

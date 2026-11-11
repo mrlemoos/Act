@@ -33,15 +33,15 @@ public enum DocumentError: LocalizedError, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .invalidUTF8: "This Fountain file is not valid UTF-8."
-        case .externalChange: "This file changed outside Act. Your writing has not been overwritten."
+        case .invalidUTF8: L10n.string("This Fountain file is not valid UTF-8.", table: "Writing")
+        case .externalChange: L10n.string("This file changed outside Act. Your writing has not been overwritten.", table: "Writing")
         }
     }
 
     public var recoverySuggestion: String? {
         switch self {
-        case .invalidUTF8: "Save a UTF-8 copy in the original application, then open that copy."
-        case .externalChange: "Use Save As to keep your version separately, or reload the file to use the external version."
+        case .invalidUTF8: L10n.string("Save a UTF-8 copy in the original application, then open that copy.", table: "Writing")
+        case .externalChange: L10n.string("Use Save As to keep your version separately, or reload the file to use the external version.", table: "Writing")
         }
     }
 }

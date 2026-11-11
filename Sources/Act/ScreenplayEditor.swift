@@ -56,7 +56,7 @@ struct ScreenplayEditor: NSViewRepresentable {
         text.backgroundColor = .textBackgroundColor
         text.insertionPointColor = .textColor
         text.delegate = context.coordinator
-        text.setAccessibilityLabel("Screenplay editor")
+        text.setAccessibilityLabel(L10n.string("Screenplay editor", table: "Writing"))
         text.string = document.source
         scroll.documentView = text
         context.coordinator.textView = text
@@ -195,7 +195,7 @@ struct ScreenplayEditor: NSViewRepresentable {
                 for mark in character.marks where !mark.isDetached && mark.nameRange.location >= 0 && NSMaxRange(mark.nameRange) <= storage.length {
                     storage.addAttribute(.backgroundColor, value: CharacterColours.colour(character.colourIndex).withAlphaComponent(0.18), range: mark.nameRange)
                     storage.addAttribute(.foregroundColor, value: CharacterColours.colour(character.colourIndex), range: mark.nameRange)
-                    storage.addAttribute(.toolTip, value: "Character: \(character.name)", range: mark.nameRange)
+                    storage.addAttribute(.toolTip, value: L10n.format("Character: %@", character.name, table: "Writing"), range: mark.nameRange)
                 }
             }
             storage.endEditing()
@@ -304,15 +304,15 @@ final class ScreenplayTextView: NSTextView {
         guard let document = screenplayDocument,
               (try? CharacterActionBlock.selected(in: string, range: selectedRange())) != nil else { return menu }
         menu.addItem(.separator())
-        let create = menu.addItem(withTitle: "Mark as New Character", action: #selector(markCharacter(_:)), keyEquivalent: "")
+        let create = menu.addItem(withTitle: L10n.string("Mark as New Character", table: "Writing"), action: #selector(markCharacter(_:)), keyEquivalent: "")
         create.target = self
         if !document.characterWorkspace.library.characters.isEmpty {
-            let link = NSMenu(title: "Link to Character")
+            let link = NSMenu(title: L10n.string("Link to Character", table: "Writing"))
             for character in document.characterWorkspace.library.characters {
                 let item = link.addItem(withTitle: character.name, action: #selector(markCharacter(_:)), keyEquivalent: "")
                 item.target = self; item.representedObject = character.id.uuidString
             }
-            let item = menu.addItem(withTitle: "Link to Character", action: nil, keyEquivalent: "")
+            let item = menu.addItem(withTitle: L10n.string("Link to Character", table: "Writing"), action: nil, keyEquivalent: "")
             item.submenu = link
         }
         return menu
@@ -330,7 +330,7 @@ final class ScreenplayTextView: NSTextView {
         _ = document.characterWorkspace.mark(selection: selection, characterID: id)
         (delegate as? ScreenplayEditor.Coordinator)?.format()
         if let error = document.characterWorkspace.error {
-            let alert = NSAlert(); alert.messageText = "Unable to mark character"; alert.informativeText = error; alert.runModal()
+            let alert = NSAlert(); alert.messageText = L10n.string("Unable to mark character", table: "Writing"); alert.informativeText = error; alert.runModal()
         }
     }
 

@@ -23,3 +23,5 @@ Active specification: [Act screenwriting v1](docs/specs/screenwriting/spec.md). 
 [Character reference sheets](docs/specs/screenwriting/character-sheets.md) adds manually marked action names, local MLX physical extraction and explicitly approved image-agent requests. Libraries live beside the screenplay; image generation never changes Fountain source.
 
 [Project board](docs/specs/project-board.md) defines the implemented visual project organisation follow-up; native gesture/relaunch verification remains open.
+
+[App localisation](docs/specs/localisation.md) adds seven interface locales through native macOS language preferences; document content remains literal.

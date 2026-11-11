@@ -33,6 +33,12 @@ open .build/Act.app
 
 The script creates a locally ad-hoc signed development app. It is not a notarised distribution release. Open `Examples/FirstLight.fountain` for a short sample.
 
+## Interface language
+
+Act supports British English, US English, Brazilian Portuguese, Spanish from Spain, French from France, German and Italian. It follows macOS app language preferences. Choose Act's language in Language & Region settings and relaunch the app. Unsupported languages fall back to British English.
+
+Interface labels, menus, messages and style examples are translated. Screenplay text, existing board content, prompts, generated shots and exported screenplay content retain their original language.
+
 ## Write
 
 Open a `.fountain` file with Command-O. Save with Command-S. Act preserves UTF-8 source and its byte order marker. The formatted view dims Fountain markers outside the current element. Source mode shows the original text. The outline includes `#` sections and `=` synopsis bodies beneath their scene or section. Each entry navigates to its own source line. Section headings use pink for `#`, blue for `##` and orange for `###` and deeper levels, in both editor and outline. The scene outline is hidden by default. Show it with Command-Option-1 to move through the screenplay. Source and PDF export are in the toolbar menu; the editor has no persistent counters or status bar.

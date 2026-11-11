@@ -8,16 +8,16 @@ public enum GenerationError: LocalizedError, Equatable, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .runtimeMissing: "Choose the llama-completion executable installed with llama.cpp. Install llama.cpp with Homebrew if needed."
-        case .modelMissing: "Download the recommended model or choose an existing GGUF file."
-        case .invalidModel: "This file is not a GGUF model. Choose a complete model file."
-        case .emptyScene: "Select a scene with screenplay text before generating shots."
-        case .sceneTooLong: "This scene exceeds the local generation limit of 12,000 UTF-8 bytes. Split it into shorter scenes."
-        case .invalidOutput: "The model did not return a complete shot list. Retry or choose another instruction model."
-        case .downloadFailed: "Model download failed. Check your connection and available storage, then retry."
-        case .checksumMismatch: "The downloaded model failed verification. Retry the download."
-        case .timedOut: "Local generation exceeded three minutes. Retry with a smaller scene or model."
-        case .runtimeFailed(let reason): "Local generation failed. \(reason)"
+        case .runtimeMissing: L10n.string("Choose the llama-completion executable installed with llama.cpp. Install llama.cpp with Homebrew if needed.", table: "Shots")
+        case .modelMissing: L10n.string("Download the recommended model or choose an existing GGUF file.", table: "Shots")
+        case .invalidModel: L10n.string("This file is not a GGUF model. Choose a complete model file.", table: "Shots")
+        case .emptyScene: L10n.string("Select a scene with screenplay text before generating shots.", table: "Shots")
+        case .sceneTooLong: L10n.string("This scene exceeds the local generation limit of 12,000 UTF-8 bytes. Split it into shorter scenes.", table: "Shots")
+        case .invalidOutput: L10n.string("The model did not return a complete shot list. Retry or choose another instruction model.", table: "Shots")
+        case .downloadFailed: L10n.string("Model download failed. Check your connection and available storage, then retry.", table: "Shots")
+        case .checksumMismatch: L10n.string("The downloaded model failed verification. Retry the download.", table: "Shots")
+        case .timedOut: L10n.string("Local generation exceeded three minutes. Retry with a smaller scene or model.", table: "Shots")
+        case .runtimeFailed(let reason): L10n.format("Local generation failed. %@", reason, table: "Shots")
         }
     }
 }

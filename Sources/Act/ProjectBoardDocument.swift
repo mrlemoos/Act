@@ -53,7 +53,7 @@ final class ProjectBoardDocument: NSDocument, ObservableObject {
     }
     func addDraft(_ url: URL) throws {
         _ = try DocumentText(data: Data(contentsOf: url))
-        change("Link draft") { board in
+        change(L10n.string("Link draft", table: "Board")) { board in
             board.cards.append(BoardCard(kind: .draft, title: url.lastPathComponent,
                 position: insertionPoint, path: url.standardizedFileURL.path))
         }
@@ -62,17 +62,17 @@ final class ProjectBoardDocument: NSDocument, ObservableObject {
         BoardPoint(x: (100 - board.pan.x) / board.zoom + Double(board.cards.count % 6) * 32, y: (100 - board.pan.y) / board.zoom + Double(board.cards.count % 6) * 32)
     }
     func chooseDraft() {
-        let panel = NSOpenPanel(); panel.title = "Link Fountain draft"; panel.canChooseDirectories = false
+        let panel = NSOpenPanel(); panel.title = L10n.string("Link Fountain draft", table: "Board"); panel.canChooseDirectories = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do { try addDraft(url) } catch { failure = error.localizedDescription }
     }
     func relink(_ card: BoardCard) {
-        let panel = NSOpenPanel(); panel.title = "Relink \(card.title)"
+        let panel = NSOpenPanel(); panel.title = L10n.format("Relink %@", card.title, table: "Board")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             if card.kind == .draft { _ = try DocumentText(data: Data(contentsOf: url)) }
             if card.kind == .shots { _ = try ShotListStore.read(from: url) }
-            change("Relink file") { board in
+            change(L10n.string("Relink file", table: "Board")) { board in
                 guard let i = board.cards.firstIndex(where: { $0.id == card.id }) else { return }
                 board.cards[i].path = url.standardizedFileURL.path
                 if card.kind == .draft { board.cards[i].title = url.lastPathComponent }
@@ -81,12 +81,12 @@ final class ProjectBoardDocument: NSDocument, ObservableObject {
     }
     func relinkOwner(_ card: BoardCard) {
         if let owner = board.cards.first(where: { $0.id == card.draftID }) { relink(owner); return }
-        guard let ownerID = card.draftID else { failure = "No original draft identity is available."; return }
-        let panel = NSOpenPanel(); panel.title = "Restore original draft reference"
+        guard let ownerID = card.draftID else { failure = L10n.string("No original draft identity is available.", table: "Board"); return }
+        let panel = NSOpenPanel(); panel.title = L10n.string("Restore original draft reference", table: "Board")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             _ = try DocumentText(data: Data(contentsOf: url))
-            change("Restore draft reference") { board in
+            change(L10n.string("Restore draft reference", table: "Board")) { board in
                 var draft = BoardCard(kind: .draft, title: url.lastPathComponent, position: insertionPoint, path: url.path)
                 draft.id = ownerID; board.cards.append(draft)
             }
@@ -99,7 +99,7 @@ final class ProjectBoardDocument: NSDocument, ObservableObject {
         return try DocumentText(data: Data(contentsOf: url)).source
     }
     func addScene(_ scene: FountainScene, draft: BoardCard) {
-        change("Add scene card") { board in
+        change(L10n.string("Add scene card", table: "Board")) { board in
             board.cards.append(BoardCard(kind: .scene, title: scene.heading, position: insertionPoint,
                 draftID: draft.id, anchor: SceneAnchor(id: scene.id, heading: scene.heading, text: scene.text)))
         }
@@ -107,20 +107,20 @@ final class ProjectBoardDocument: NSDocument, ObservableObject {
     func addAsset(_ kind: BoardCard.Kind, draft: BoardCard) {
         var path: String?
         if kind == .shots {
-            let panel = NSOpenPanel(); panel.title = "Link existing shot list"; panel.allowedContentTypes = [.json]
+            let panel = NSOpenPanel(); panel.title = L10n.string("Link existing shot list", table: "Board"); panel.allowedContentTypes = [.json]
             guard panel.runModal() == .OK, let url = panel.url else { return }
             do { _ = try ShotListStore.read(from: url); path = url.path }
             catch { failure = error.localizedDescription; return }
         }
-        change("Link planning asset") { board in
-            board.cards.append(BoardCard(kind: kind, title: kind == .characters ? "Character sheets" : "Shot list",
+        change(L10n.string("Link planning asset", table: "Board")) { board in
+            board.cards.append(BoardCard(kind: kind, title: BoardPresentation.defaultAssetTitle(kind),
                 position: insertionPoint, draftID: draft.id, path: path))
         }
     }
     func open(_ card: BoardCard) {
         let owner = board.cards.first { $0.id == card.draftID }
         let url = card.kind == .shots ? owner.flatMap { board.resolvedURL(for: $0) } : board.resolvedURL(for: card)
-        guard let url else { failure = "Draft reference missing. Relink the original draft."; return }
+        guard let url else { failure = L10n.string("Draft reference missing. Relink the original draft.", table: "Board"); return }
         NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { [weak self] document, _, error in
             if let error { self?.failure = error.localizedDescription; return }
             guard let draft = document as? FountainDocument else { return }
@@ -129,13 +129,13 @@ final class ProjectBoardDocument: NSDocument, ObservableObject {
                     draft.shotWorkspace.prepare(source: draft.source, name: draft.fileURL?.deletingPathExtension().lastPathComponent, identity: url.path)
                     try draft.shotWorkspace.openLinked(URL(fileURLWithPath: path))
                 }
-                catch { self?.failure = "Cannot open linked shot list: \(error.localizedDescription) Save pending shot edits first."; return }
+                catch { self?.failure = L10n.format("Cannot open linked shot list: %@ Save pending shot edits first.", error.localizedDescription, table: "Board"); return }
             }
             draft.requestedWorkspace = card.kind == .characters ? .characters : card.kind == .shots ? .shots : .screenplay
             if card.kind == .scene, let anchor = card.anchor {
                 guard let scene = FountainParser.parse(draft.source).scenes.first(where: { $0.id == anchor.id }),
                       SceneAnchor.digest(scene.text) == anchor.fingerprint else {
-                    self?.failure = "Scene needs review. Opened draft without selecting a different scene."; return
+                    self?.failure = L10n.string("Scene needs review. Opened draft without selecting a different scene.", table: "Board"); return
                 }
                 draft.requestedSceneID = scene.id
             }
@@ -143,9 +143,9 @@ final class ProjectBoardDocument: NSDocument, ObservableObject {
     }
     func confirmTermination() -> Bool {
         guard isDocumentEdited else { return true }
-        let alert = NSAlert(); alert.messageText = "Save project board changes?"
-        alert.informativeText = "Your linked source files are unaffected."
-        alert.addButton(withTitle: "Save"); alert.addButton(withTitle: "Cancel"); alert.addButton(withTitle: "Discard Changes")
+        let alert = NSAlert(); alert.messageText = L10n.string("Save project board changes?", table: "Board")
+        alert.informativeText = L10n.string("Your linked source files are unaffected.", table: "Board")
+        alert.addButton(withTitle: L10n.string("Save", table: "Board")); alert.addButton(withTitle: L10n.string("Cancel", table: "Board")); alert.addButton(withTitle: L10n.string("Discard Changes", table: "Board"))
         switch alert.runModal() {
         case .alertFirstButtonReturn: save(nil); return !isDocumentEdited
         case .alertThirdButtonReturn: return true

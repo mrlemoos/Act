@@ -44,7 +44,7 @@ final class ScreenplayPreviewModel: ObservableObject {
         info.topMargin = 0; info.bottomMargin = 0; info.leftMargin = 0; info.rightMargin = 0
         info.isHorizontallyCentered = false; info.isVerticallyCentered = false
         guard let operation = pdf.printOperation(for: info, scalingMode: .pageScaleNone, autoRotate: false) else {
-            error = "Act could not prepare the screenplay for printing."
+            error = L10n.string("Act could not prepare the screenplay for printing.", table: "Writing")
             return
         }
         operation.run()
@@ -53,7 +53,7 @@ final class ScreenplayPreviewModel: ObservableObject {
     func exportPDF() {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.pdf]
-        panel.nameFieldStringValue = (screenplay?.fileURL?.deletingPathExtension().lastPathComponent ?? "Screenplay") + ".pdf"
+        panel.nameFieldStringValue = (screenplay?.fileURL?.deletingPathExtension().lastPathComponent ?? L10n.string("Screenplay", table: "Writing")) + ".pdf"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         refresh()
         guard let data = pdf?.dataRepresentation() else { return }
@@ -68,22 +68,31 @@ struct ScreenplayPreview: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 16) {
-                Picker("Paper", selection: Binding(get: { ScreenplayPaper.read(from: document.source) }, set: { document.setPaper($0) })) {
-                    ForEach(ScreenplayPaper.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }.frame(width: 190)
-                Spacer()
-                Button("Export PDF…", action: model.exportPDF)
-                Button("Print…", action: model.printPDF).buttonStyle(.borderedProminent)
-            }.padding(16)
+            ScreenplayPreviewToolbar(document: document, model: model)
             Divider()
             if let error = model.error {
-                ContentUnavailableView("Unable to create PDF", systemImage: "doc", description: Text(error))
-                Button("Retry", action: model.refresh).padding(.bottom)
+                ContentUnavailableView(L10n.string("Unable to create PDF", table: "Writing"), systemImage: "doc", description: Text(error))
+                Button(L10n.string("Retry", table: "Writing"), action: model.refresh).padding(.bottom)
             } else if let pdf = model.pdf {
                 ScreenplayPDFView(document: pdf)
             }
         }.frame(minWidth: 580, minHeight: 480)
+    }
+}
+
+struct ScreenplayPreviewToolbar: View {
+    @ObservedObject var document: FountainDocument
+    @ObservedObject var model: ScreenplayPreviewModel
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Picker(L10n.string("Paper", table: "Writing"), selection: Binding(get: { ScreenplayPaper.read(from: document.source) }, set: { document.setPaper($0) })) {
+                ForEach(ScreenplayPaper.allCases, id: \.self) { Text(L10n.string($0.rawValue, table: "Writing")).tag($0) }
+            }.frame(width: 190)
+            Spacer()
+            Button(L10n.string("Export PDF…", table: "Writing"), action: model.exportPDF)
+            Button(L10n.string("Print…", table: "Writing"), action: model.printPDF).buttonStyle(.borderedProminent)
+        }.padding(16)
     }
 }
 
@@ -124,7 +133,7 @@ final class ScreenplayPreviewController: NSWindowController {
         model = ScreenplayPreviewModel(document: document)
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 800, height: 900),
                               styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = "PDF preview"
+        window.title = L10n.string("PDF preview", table: "Writing")
         window.isReleasedWhenClosed = false
         window.minSize = NSSize(width: 580, height: 480)
         window.contentView = NSHostingView(rootView: ScreenplayPreview(document: document, model: model))

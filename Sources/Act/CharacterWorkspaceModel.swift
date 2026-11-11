@@ -63,7 +63,7 @@ final class CharacterWorkspaceModel: ObservableObject {
                 save()
                 guard !isDirty else { return }
                 guard !FileManager.default.fileExists(atPath: newDirectory.path) else {
-                    throw CharacterSheetError.operation("A character folder already exists at the new screenplay location. The original library is preserved; reopen to load the destination library.")
+                    throw CharacterSheetError.operation(L10n.string("A character folder already exists at the new screenplay location. The original library is preserved; reopen to load the destination library.", table: "Characters"))
                 }
                 if FileManager.default.fileExists(atPath: oldDirectory.path) { try FileManager.default.copyItem(at: oldDirectory, to: newDirectory) }
             }
@@ -98,7 +98,7 @@ final class CharacterWorkspaceModel: ObservableObject {
             let id = try updated.mark(source: source, selection: selection, characterID: characterID)
             library = updated; selectedID = id
             save()
-            status = "Character marked. Extract physical details when ready."
+            status = L10n.string("Character marked. Extract physical details when ready.", table: "Characters")
             return true
         } catch { self.error = error.localizedDescription; return false }
     }
@@ -126,9 +126,9 @@ final class CharacterWorkspaceModel: ObservableObject {
         guard let character = library.characters.first(where: { $0.id == id }) else { return }
         if !character.prompt.isEmpty {
             let alert = NSAlert()
-            alert.messageText = "Replace this prompt with extracted details?"
-            alert.informativeText = "Your current prompt will be replaced. Existing image versions retain the prompts used to create them."
-            alert.addButton(withTitle: "Replace Prompt"); alert.addButton(withTitle: "Cancel")
+            alert.messageText = L10n.string("Replace this prompt with extracted details?", table: "Characters")
+            alert.informativeText = L10n.string("Your current prompt will be replaced. Existing image versions retain the prompts used to create them.", table: "Characters")
+            alert.addButton(withTitle: L10n.string("Replace Prompt", table: "Characters")); alert.addButton(withTitle: L10n.string("Cancel", table: "Characters"))
             guard alert.runModal() == .alertFirstButtonReturn else { return }
         }
         updatePrompt(character.suggestedPrompt, id: id)
@@ -136,10 +136,10 @@ final class CharacterWorkspaceModel: ObservableObject {
 
     func extract(id: UUID) {
         guard !isBusy, let character = library.characters.first(where: { $0.id == id }) else { return }
-        guard let mlxExecutable, let mlxModel else { error = "Choose an MLX runtime and downloaded model in Character Tools first."; return }
+        guard let mlxExecutable, let mlxModel else { error = L10n.string("Choose an MLX runtime and downloaded model in Character Tools first.", table: "Characters"); return }
         guard !character.marks.isEmpty, !character.marks.contains(where: \.isDetached) else { error = CharacterSheetError.staleMark.localizedDescription; return }
         let snapshots = character.marks
-        isBusy = true; status = "Extracting physical details locally with MLX…"
+        isBusy = true; status = L10n.string("Extracting physical details locally with MLX…", table: "Characters")
         task = Task {
             defer { isBusy = false; task = nil }
             do {
@@ -151,7 +151,7 @@ final class CharacterWorkspaceModel: ObservableObject {
                 }
                 try Task.checkCancellation()
                 guard let index = library.characters.firstIndex(where: { $0.id == id }),
-                      library.characters[index].marks == snapshots else { throw CharacterSheetError.operation("Action paragraphs changed during extraction. Retry with the updated text.") }
+                      library.characters[index].marks == snapshots else { throw CharacterSheetError.operation(L10n.string("Action paragraphs changed during extraction. Retry with the updated text.", table: "Characters")) }
                 var updated = library
                 for m in updated.characters[index].marks.indices {
                     updated.characters[index].marks[m].traits = details[updated.characters[index].marks[m].id] ?? []
@@ -159,24 +159,24 @@ final class CharacterWorkspaceModel: ObservableObject {
                 }
                 if updated.characters[index].prompt.isEmpty { updated.characters[index].prompt = updated.characters[index].suggestedPrompt }
                 library = updated; save()
-                status = "Physical details ready for review. Your existing prompt is preserved."
-            } catch is CancellationError { status = "Extraction cancelled. Existing details preserved." }
-            catch { self.error = error.localizedDescription; status = "Extraction failed. Existing details preserved." }
+                status = L10n.string("Physical details ready for review. Your existing prompt is preserved.", table: "Characters")
+            } catch is CancellationError { status = L10n.string("Extraction cancelled. Existing details preserved.", table: "Characters") }
+            catch { self.error = error.localizedDescription; status = L10n.string("Extraction failed. Existing details preserved.", table: "Characters") }
         }
     }
 
     func generate(id: UUID, iterate: Bool) {
         guard !isBusy, !loadFailed, let character = library.characters.first(where: { $0.id == id }), let connection = selectedConnection else { return }
-        guard let directory else { error = "Save the screenplay before generating a character sheet."; return }
+        guard let directory else { error = L10n.string("Save the screenplay before generating a character sheet.", table: "Characters"); return }
         save()
         guard !isDirty else { return }
-        guard !iterate || connection.canEdit else { error = "Verify reference-image editing for this agent first."; return }
+        guard !iterate || connection.canEdit else { error = L10n.string("Verify reference-image editing for this agent first.", table: "Characters"); return }
         do {
             let reference = iterate ? try imageData(for: character.activeVersion) : nil
             guard !iterate || reference != nil else { throw CharacterSheetError.missingImage }
             guard approve(prompt: character.prompt, agent: connection.agent, reference: reference) else { return }
             let prompt = character.prompt, referenceID = iterate ? character.activeVersionID : nil
-            isBusy = true; status = iterate ? "Iterating on the active sheet…" : "Generating character sheet…"
+            isBusy = true; status = iterate ? L10n.string("Iterating on the active sheet…", table: "Characters") : L10n.string("Generating character sheet…", table: "Characters")
             task = Task {
                 defer { isBusy = false; task = nil }
                 do {
@@ -190,9 +190,9 @@ final class CharacterWorkspaceModel: ObservableObject {
                     library.characters[index].versions.append(version)
                     library.characters[index].activeVersionID = version.id
                     save()
-                    status = "New sheet imported. Previous versions preserved."
-                } catch is CancellationError { status = "Generation cancelled. Previous sheets preserved." }
-                catch { self.error = error.localizedDescription; status = "Generation failed. Prompt and previous sheets preserved." }
+                    status = L10n.string("New sheet imported. Previous versions preserved.", table: "Characters")
+                } catch is CancellationError { status = L10n.string("Generation cancelled. Previous sheets preserved.", table: "Characters") }
+                catch { self.error = error.localizedDescription; status = L10n.string("Generation failed. Prompt and previous sheets preserved.", table: "Characters") }
             }
         } catch { self.error = error.localizedDescription }
     }
@@ -207,19 +207,19 @@ final class CharacterWorkspaceModel: ObservableObject {
 
     func chooseMLX(model: Bool) {
         let panel = NSOpenPanel()
-        panel.title = model ? "Choose downloaded MLX model directory" : "Choose mlx_lm.generate executable"
+        panel.title = model ? L10n.string("Choose downloaded MLX model directory", table: "Characters") : L10n.string("Choose mlx_lm.generate executable", table: "Characters")
         panel.canChooseDirectories = model; panel.canChooseFiles = !model
         panel.showsHiddenFiles = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
         if model { mlxModel = url; defaults.set(url.path, forKey: "Act.characterMLXModel") }
         else if FileManager.default.isExecutableFile(atPath: url.path) { mlxExecutable = url; defaults.set(url.path, forKey: "Act.characterMLXExecutable") }
-        else { error = "Choose an executable mlx_lm.generate file." }
+        else { error = L10n.string("Choose an executable mlx_lm.generate file.", table: "Characters") }
     }
 
     func connection(for agent: CharacterImageAgent) -> ImageAgentConnection? { connections.first { $0.agent == agent } }
 
     func chooseAgent(_ agent: CharacterImageAgent) {
-        let panel = NSOpenPanel(); panel.title = "Choose \(agent.title) executable"; panel.showsHiddenFiles = true
+        let panel = NSOpenPanel(); panel.title = L10n.format("Choose %@ executable", agent.title, table: "Characters"); panel.showsHiddenFiles = true
         guard panel.runModal() == .OK, let url = panel.url, FileManager.default.isExecutableFile(atPath: url.path) else { return }
         connections.removeAll { $0.agent == agent }
         connections.append(.init(agent: agent, executable: url)); persistConnections()
@@ -228,13 +228,13 @@ final class CharacterWorkspaceModel: ObservableObject {
     func verify(_ agent: CharacterImageAgent, editing: Bool) {
         guard !isBusy else { return }
         guard var connection = connection(for: agent) ?? agent.discoveredExecutable.map({ ImageAgentConnection(agent: agent, executable: $0) }) else {
-            error = "Install and sign in to \(agent.title), or choose its executable."; return
+            error = L10n.format("Install and sign in to %@, or choose its executable.", agent.title, table: "Characters"); return
         }
         let reference = editing ? connection.verificationImage : nil
-        guard !editing || (connection.canGenerate && reference != nil) else { error = "Verify image generation first."; return }
+        guard !editing || (connection.canGenerate && reference != nil) else { error = L10n.string("Verify image generation first.", table: "Characters"); return }
         let prompt = editing ? CharacterImageAgent.editingVerificationPrompt : CharacterImageAgent.verificationPrompt
         guard approve(prompt: prompt, agent: agent, reference: reference) else { return }
-        isBusy = true; status = "Testing \(agent.title) \(editing ? "reference editing" : "image generation")…"
+        isBusy = true; status = L10n.format(editing ? "Testing %@ reference editing…" : "Testing %@ image generation…", agent.title, table: "Characters")
         task = Task {
             defer { isBusy = false; task = nil }
             do {
@@ -246,25 +246,25 @@ final class CharacterWorkspaceModel: ObservableObject {
                 else { connection.verificationImage = image.data; connection.editingVerified = false }
                 connections.removeAll { $0.agent == agent }; connections.append(connection)
                 selectedAgent = agent; persistConnections()
-                status = "\(agent.title) returned a valid image. Inspect the test result to check \(editing ? "the requested edit" : "the grey cube")."
+                status = L10n.format(editing ? "%@ returned a valid image. Inspect the test result to check the requested edit." : "%@ returned a valid image. Inspect the test result to check the grey cube.", agent.title, table: "Characters")
                 // Capability tests return a real image, so users can inspect semantic success as well as file validity.
                 showVerification(image.data, agent: agent, editing: editing)
-            } catch is CancellationError { status = "Agent test cancelled." }
+            } catch is CancellationError { status = L10n.string("Agent test cancelled.", table: "Characters") }
             catch {
                 if let index = connections.firstIndex(where: { $0.agent == agent }) {
                     if editing { connections[index].editingVerified = false } else { connections[index].generationVerified = false; connections[index].editingVerified = false }
                     persistConnections()
                 }
-                self.error = error.localizedDescription; status = "Agent test failed. No capability enabled."
+                self.error = error.localizedDescription; status = L10n.string("Agent test failed. No capability enabled.", table: "Characters")
             }
         }
     }
 
     private func showVerification(_ data: Data, agent: CharacterImageAgent, editing: Bool) {
-        let alert = NSAlert(); alert.messageText = "Did \(agent.title) \(editing ? "change the cube to blue" : "generate a grey cube")?"
-        alert.informativeText = "Confirm only if the image matches the test. A valid image file alone does not prove the requested tool worked."
+        let alert = NSAlert(); alert.messageText = L10n.format(editing ? "Did %@ change the cube to blue?" : "Did %@ generate a grey cube?", agent.title, table: "Characters")
+        alert.informativeText = L10n.string("Confirm only if the image matches the test. A valid image file alone does not prove the requested tool worked.", table: "Characters")
         let view = NSImageView(frame: NSRect(x: 0, y: 0, width: 360, height: 250)); view.imageScaling = .scaleProportionallyUpOrDown; view.image = NSImage(data: data)
-        alert.accessoryView = view; alert.addButton(withTitle: "Confirm"); alert.addButton(withTitle: "Failed")
+        alert.accessoryView = view; alert.addButton(withTitle: L10n.string("Confirm", table: "Characters")); alert.addButton(withTitle: L10n.string("Failed", table: "Characters"))
         if alert.runModal() != .alertFirstButtonReturn, let index = connections.firstIndex(where: { $0.agent == agent }) {
             if editing { connections[index].editingVerified = false } else { connections[index].generationVerified = false; connections[index].editingVerified = false }
             persistConnections()
@@ -275,9 +275,9 @@ final class CharacterWorkspaceModel: ObservableObject {
     func cancel() { task?.cancel() }
 
     private func approve(prompt: String, agent: CharacterImageAgent, reference: Data?) -> Bool {
-        guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { error = "Write or extract a prompt first."; return false }
-        let alert = NSAlert(); alert.messageText = "Send this prompt to \(agent.title)?"
-        alert.informativeText = "This request uses the agent's configured account and image tools and may incur charges. Act supplies this description\(reference == nil ? "" : " and the displayed reference image"), plus instructions for saving the result. No screenplay file is attached. Your configured agent may add its own instructions."
+        guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { error = L10n.string("Write or extract a prompt first.", table: "Characters"); return false }
+        let alert = NSAlert(); alert.messageText = L10n.format("Send this prompt to %@?", agent.title, table: "Characters")
+        alert.informativeText = L10n.string(reference == nil ? "This request uses the agent's configured account and image tools and may incur charges. Act supplies this description, plus instructions for saving the result. No screenplay file is attached. Your configured agent may add its own instructions." : "This request uses the agent's configured account and image tools and may incur charges. Act supplies this description and the displayed reference image, plus instructions for saving the result. No screenplay file is attached. Your configured agent may add its own instructions.", table: "Characters")
         let stack = NSStackView(); stack.orientation = .vertical; stack.alignment = .leading
         let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 480, height: 220)); scroll.hasVerticalScroller = true
         let text = NSTextView(frame: scroll.bounds); text.isEditable = false; text.isRichText = false; text.string = prompt; text.font = .systemFont(ofSize: 12)
@@ -286,7 +286,7 @@ final class CharacterWorkspaceModel: ObservableObject {
             let image = NSImageView(frame: NSRect(x: 0, y: 0, width: 480, height: 180)); image.imageScaling = .scaleProportionallyUpOrDown; image.image = NSImage(data: reference)
             stack.addArrangedSubview(image)
         }
-        alert.accessoryView = stack; alert.addButton(withTitle: "Send and Generate"); alert.addButton(withTitle: "Cancel")
+        alert.accessoryView = stack; alert.addButton(withTitle: L10n.string("Send and Generate", table: "Characters")); alert.addButton(withTitle: L10n.string("Cancel", table: "Characters"))
         return alert.runModal() == .alertFirstButtonReturn
     }
 }

@@ -90,10 +90,10 @@ public enum ShotListError: LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .unsupportedVersion(let version): "This shot list uses unsupported format version \(version). Your existing file has not been changed."
-        case .duplicateShots: "This shot list contains duplicate shot identifiers."
-        case .duplicateScenes: "This shot list contains duplicate scene identifiers."
-        case .wrongScene: "Generated shots do not belong to the selected scene."
+        case .unsupportedVersion(let version): L10n.format("This shot list uses unsupported format version %d. Your existing file has not been changed.", version, table: "Shots")
+        case .duplicateShots: L10n.string("This shot list contains duplicate shot identifiers.", table: "Shots")
+        case .duplicateScenes: L10n.string("This shot list contains duplicate scene identifiers.", table: "Shots")
+        case .wrongScene: L10n.string("Generated shots do not belong to the selected scene.", table: "Shots")
         }
     }
 }

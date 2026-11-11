@@ -5,7 +5,7 @@ import Foundation
 
 public enum ScreenplayPDFError: LocalizedError {
     case cannotCreatePDF
-    public var errorDescription: String? { "Act could not create the screenplay PDF." }
+    public var errorDescription: String? { L10n.string("Act could not create the screenplay PDF.", table: "Writing") }
 }
 
 public struct ScreenplayPDFLine: Sendable {

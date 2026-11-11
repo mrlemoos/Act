@@ -13,7 +13,7 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("Style").font(.system(size: 13, weight: .semibold))
+                Text(L10n.string("Style", table: "Writing")).font(.system(size: 13, weight: .semibold))
                 Spacer()
                 if let onClose {
                     Button(action: onClose) {
@@ -21,18 +21,18 @@ struct SettingsView: View {
                             .frame(width: 24, height: 24).contentShape(Rectangle())
                     }
                     .buttonStyle(.plain).foregroundStyle(.secondary)
-                    .help("Close settings").accessibilityLabel("Close settings")
+                    .help(L10n.string("Close settings", table: "Writing")).accessibilityLabel(L10n.string("Close settings", table: "Writing"))
                 }
             }.padding(.horizontal, 20).frame(height: 44)
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    section("Typography") {
+                    section(L10n.string("Typography", table: "Writing")) {
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
-                                Text("Font")
+                                Text(L10n.string("Font", table: "Writing"))
                                 Spacer(minLength: 12)
-                                Picker("Font", selection: $preferences.settings.fontName) {
+                                Picker(L10n.string("Font", table: "Writing"), selection: $preferences.settings.fontName) {
                                     ForEach(fonts, id: \.self) { family in Text(family).tag(family) }
                                 }.labelsHidden().frame(maxWidth: 180)
                             }
@@ -40,44 +40,44 @@ struct SettingsView: View {
                         }
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
-                                Text("Size")
+                                Text(L10n.string("Size", table: "Writing"))
                                 Spacer()
                                 Text("\(Int(preferences.settings.fontSize)) pt")
                                     .monospacedDigit().foregroundStyle(.secondary)
-                                Stepper("Font size", value: $preferences.settings.fontSize, in: 8...24, step: 1)
-                                    .labelsHidden().fixedSize().accessibilityLabel("Font size")
+                                Stepper(L10n.string("Font size", table: "Writing"), value: $preferences.settings.fontSize, in: 8...24, step: 1)
+                                    .labelsHidden().fixedSize().accessibilityLabel(L10n.string("Font size", table: "Writing"))
                             }
                             preview(.size)
                         }
                     }
                     Divider()
-                    section("Scene headings") {
+                    section(L10n.string("Scene headings", table: "Writing")) {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("Space before heading")
-                            Picker("Space before heading", selection: $preferences.settings.blankLinesBeforeSlugline) {
-                                Text("1 blank line").tag(1)
-                                Text("2 blank lines").tag(2)
+                            Text(L10n.string("Space before heading", table: "Writing"))
+                            Picker(L10n.string("Space before heading", table: "Writing"), selection: $preferences.settings.blankLinesBeforeSlugline) {
+                                Text(L10n.string("1 blank line", table: "Writing")).tag(1)
+                                Text(L10n.string("2 blank lines", table: "Writing")).tag(2)
                             }.labelsHidden().pickerStyle(.segmented)
                             preview(.spacing)
                         }
                         VStack(alignment: .leading, spacing: 10) {
-                            Toggle("Bold headings", isOn: $preferences.settings.boldSluglines)
+                            Toggle(L10n.string("Bold headings", table: "Writing"), isOn: $preferences.settings.boldSluglines)
                                 .toggleStyle(.switch)
                             preview(.heading)
                         }
                     }
                     Divider()
-                    section("Dialogue") {
+                    section(L10n.string("Dialogue", table: "Writing")) {
                         VStack(alignment: .leading, spacing: 10) {
-                            Toggle("Automatic CONT'D", isOn: $preferences.settings.dialogueContinuations)
+                            Toggle(L10n.string("Automatic CONT'D", table: "Writing"), isOn: $preferences.settings.dialogueContinuations)
                                 .toggleStyle(.switch)
-                            Text("When the same speaker resumes after action.")
+                            Text(L10n.string("When the same speaker resumes after action.", table: "Writing"))
                                 .font(.system(size: 11)).foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                             preview(.dialogue)
                         }
                     }
-                    Text("Applies to all screenplays and PDF exports.")
+                    Text(L10n.string("Applies to all screenplays and PDF exports.", table: "Writing"))
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -131,24 +131,24 @@ struct ScreenplayStyleExample: View {
         VStack(alignment: .leading, spacing: 0) {
             switch kind {
             case .font:
-                Text("The beginning of something.")
+                Text(L10n.string("The beginning of something.", table: "Writing"))
                 Text("Aa Bb Cc 0123456789").foregroundStyle(.secondary).padding(.top, 6)
             case .size:
-                Text("She sets down the cup.")
+                Text(L10n.string("She sets down the cup.", table: "Writing"))
             case .spacing:
-                Text("She steps outside.").foregroundStyle(.secondary)
-                Text("EXT. STREET - DAY").font(headingFont)
+                Text(L10n.string("She steps outside.", table: "Writing")).foregroundStyle(.secondary)
+                Text(L10n.string("EXT. STREET - DAY", table: "Writing")).font(headingFont)
                     .padding(.top, CGFloat(settings.validated.blankLinesBeforeSlugline) * lineHeight)
             case .heading:
-                Text("INT. KITCHEN - DAY").font(headingFont)
+                Text(L10n.string("INT. KITCHEN - DAY", table: "Writing")).font(headingFont)
             case .dialogue:
                 dialogue
             case .full:
-                Text("A quiet morning")
+                Text(L10n.string("A quiet morning", table: "Writing"))
                     .font(.system(size: font.pointSize, weight: .semibold))
                     .foregroundStyle(Color(nsColor: SectionColours.forLevel(1)))
-                Text("She sets down the cup.").padding(.top, lineHeight)
-                Text("INT. KITCHEN - DAY").font(headingFont)
+                Text(L10n.string("She sets down the cup.", table: "Writing")).padding(.top, lineHeight)
+                Text(L10n.string("INT. KITCHEN - DAY", table: "Writing")).font(headingFont)
                     .padding(.top, CGFloat(settings.validated.blankLinesBeforeSlugline) * lineHeight)
                 dialogue.padding(.top, lineHeight)
             }
@@ -167,21 +167,21 @@ struct ScreenplayStyleExample: View {
     private var dialogue: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("MARA").padding(.leading, 44)
-            Text("Stay for coffee.").padding(.leading, 20)
-            Text("She waits.").padding(.top, lineHeight).foregroundStyle(.secondary)
+            Text(L10n.string("Stay for coffee.", table: "Writing")).padding(.leading, 20)
+            Text(L10n.string("She waits.", table: "Writing")).padding(.top, lineHeight).foregroundStyle(.secondary)
             Text(continuedCue).padding(.leading, 44).padding(.top, lineHeight)
-            Text("Please.").padding(.leading, 20)
+            Text(L10n.string("Please.", table: "Writing")).padding(.leading, 20)
         }
     }
 
     private var previewLabel: String {
         switch kind {
-        case .full: "Live screenplay style example"
-        case .font: "Live font preview"
-        case .size: "Live font size preview"
-        case .spacing: "Live scene heading spacing preview"
-        case .heading: "Live scene heading weight preview"
-        case .dialogue: "Live dialogue continuation preview"
+        case .full: L10n.string("Live screenplay style example", table: "Writing")
+        case .font: L10n.string("Live font preview", table: "Writing")
+        case .size: L10n.string("Live font size preview", table: "Writing")
+        case .spacing: L10n.string("Live scene heading spacing preview", table: "Writing")
+        case .heading: L10n.string("Live scene heading weight preview", table: "Writing")
+        case .dialogue: L10n.string("Live dialogue continuation preview", table: "Writing")
         }
     }
 }

@@ -22,3 +22,5 @@ Startup checker flags metadata inconsistencies and lifecycle review candidates. 
 - [Character reference sheets](screenwriting/character-sheets.md)
 
 - [Project board](project-board.md)
+
+- [App localisation](localisation.md)

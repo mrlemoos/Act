@@ -67,7 +67,7 @@ public struct GeneratedCharacterImage: Sendable {
 public enum CharacterImageGenerator {
     public static func generate(agent: CharacterImageAgent, executable: URL, prompt: String, reference: Data? = nil) async throws -> GeneratedCharacterImage {
         guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, prompt.utf8.count <= 32_000 else {
-            throw CharacterSheetError.operation("Enter a prompt of at most 32,000 UTF-8 bytes.")
+            throw CharacterSheetError.operation(L10n.string("Enter a prompt of at most 32,000 UTF-8 bytes.", table: "Characters"))
         }
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Act-Image-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

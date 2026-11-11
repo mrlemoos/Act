@@ -31,31 +31,31 @@ struct WorkspaceView: View {
             HStack(spacing: 20) {
                 Button { showOutline.toggle() } label: { Image(systemName: "sidebar.left") }
                     .keyboardShortcut("1", modifiers: [.command, .option])
-                    .help("Toggle scene outline")
-                    .accessibilityLabel("Toggle scene outline")
+                    .help(L10n.string("Toggle scene outline", table: "Writing"))
+                    .accessibilityLabel(L10n.string("Toggle scene outline", table: "Writing"))
                 Spacer()
-                Picker("Workspace", selection: $workspace) {
-                    Text("Screenplay").tag(WorkspaceSection.screenplay)
-                    Text("Board").tag(WorkspaceSection.board)
-                    Text("Shot list").tag(WorkspaceSection.shots)
-                    Text("Characters").tag(WorkspaceSection.characters)
-                }.pickerStyle(.segmented).labelsHidden().frame(width: 380)
+                Picker(L10n.string("Workspace", table: "Writing"), selection: $workspace) {
+                    Text(L10n.string("Screenplay", table: "Writing")).tag(WorkspaceSection.screenplay)
+                    Text(L10n.string("Board", table: "Writing")).tag(WorkspaceSection.board)
+                    Text(L10n.string("Shot list", table: "Writing")).tag(WorkspaceSection.shots)
+                    Text(L10n.string("Characters", table: "Writing")).tag(WorkspaceSection.characters)
+                }.pickerStyle(.segmented).labelsHidden().frame(minWidth: 380, idealWidth: 470, maxWidth: 520)
                 Spacer()
                 Menu {
-                    Toggle("Scene outline", isOn: $showOutline)
+                    Toggle(L10n.string("Scene outline", table: "Writing"), isOn: $showOutline)
                     if workspace == .screenplay {
-                        Toggle("Fountain source", isOn: $sourceMode)
+                        Toggle(L10n.string("Fountain source", table: "Writing"), isOn: $sourceMode)
                             .keyboardShortcut("m", modifiers: [.command, .shift])
                         Divider()
-                        Button("PDF Preview…") { document.showPDFPreview() }
-                        Button("Export PDF…", action: exportPDF)
+                        Button(L10n.string("PDF Preview…", table: "Writing")) { document.showPDFPreview() }
+                        Button(L10n.string("Export PDF…", table: "Writing"), action: exportPDF)
                             .keyboardShortcut("e", modifiers: [.command, .shift])
                     }
                     Divider()
-                    Button("Settings…") { (NSApp.delegate as? ActApplicationDelegate)?.openSettings(nil) }
+                    Button(L10n.string("Settings…", table: "Writing")) { (NSApp.delegate as? ActApplicationDelegate)?.openSettings(nil) }
                 } label: { Image(systemName: "ellipsis").frame(width: 20) }
                 .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                .help("View and export").accessibilityLabel("View and export")
+                .help(L10n.string("View and export", table: "Writing")).accessibilityLabel(L10n.string("View and export", table: "Writing"))
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 24).frame(height: 42)
@@ -105,21 +105,21 @@ struct WorkspaceView: View {
             document.isShotWorkspaceActive = workspace == .shots
             document.isCharacterWorkspaceActive = workspace == .characters
         }
-        .alert("Unable to export PDF", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
-            Button("OK") { errorMessage = nil }
+        .alert(L10n.string("Unable to export PDF", table: "Writing"), isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+            Button(L10n.string("OK", table: "Writing")) { errorMessage = nil }
         } message: { Text(errorMessage ?? "") }
     }
 
     private var outline: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("Outline").font(.system(size: 11, weight: .medium))
+                Text(L10n.string("Outline", table: "Writing")).font(.system(size: 11, weight: .medium))
                 Spacer()
             }.foregroundStyle(.secondary).padding(.horizontal, 22).padding(.top, 25).padding(.bottom, 18)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 2) {
                     if outlineEntries.isEmpty {
-                        Text("No outline")
+                        Text(L10n.string("No outline", table: "Writing"))
                             .font(.system(size: 12)).foregroundStyle(.secondary)
                             .padding(.horizontal, 12).padding(.top, 4)
                     }
@@ -130,7 +130,7 @@ struct WorkspaceView: View {
                             selectionRequest = UUID()
                             workspace = .screenplay
                         } label: {
-                            Text(entry.text.isEmpty ? (entry.kind == .section ? "Untitled section" : "Synopsis") : entry.text)
+                            Text(entry.text.isEmpty ? (entry.kind == .section ? L10n.string("Untitled section", table: "Writing") : L10n.string("Synopsis", table: "Writing")) : entry.text)
                                 .font(.system(size: entry.kind == .section ? 12 : 11, weight: entry.kind == .section ? .semibold : entry.kind == .synopsis ? .regular : .medium))
                                 .foregroundStyle(entry.kind == .section ? Color(nsColor: SectionColours.forLevel(entry.depth + 1)) : entry.kind == .synopsis ? Color.secondary : Color.primary)
                                 .multilineTextAlignment(.leading)
@@ -143,7 +143,7 @@ struct WorkspaceView: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel(entry.kind == .synopsis ? "Synopsis: " + entry.text : entry.text)
+                        .accessibilityLabel(entry.kind == .synopsis ? L10n.format("Synopsis: %@", entry.text, table: "Writing") : entry.text)
                     }
                 }.padding(.horizontal, 10)
             }
@@ -165,7 +165,7 @@ struct WorkspaceView: View {
     private func exportPDF() {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.pdf]
-        panel.nameFieldStringValue = (document.fileURL?.deletingPathExtension().lastPathComponent ?? "Screenplay") + ".pdf"
+        panel.nameFieldStringValue = (document.fileURL?.deletingPathExtension().lastPathComponent ?? L10n.string("Screenplay", table: "Writing")) + ".pdf"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do { try ScreenplayPDF.export(source: document.source, to: url, settings: preferences.settings) }
         catch { errorMessage = error.localizedDescription }

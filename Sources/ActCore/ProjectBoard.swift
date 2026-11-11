@@ -92,7 +92,7 @@ public struct ProjectBoard: Codable, Equatable, Sendable {
 
 public enum BoardError: LocalizedError {
     case invalid
-    public var errorDescription: String? { "This project board contains unsupported or invalid data. Existing files are preserved." }
+    public var errorDescription: String? { L10n.string("This project board contains unsupported or invalid data. Existing files are preserved.", table: "Board") }
 }
 
 public enum ProjectBoardStore {
@@ -102,5 +102,45 @@ public enum ProjectBoardStore {
     }
     public static func load(_ data: Data) throws -> ProjectBoard {
         try JSONDecoder().decode(ProjectBoard.self, from: data).validated()
+    }
+}
+
+
+/// Localised board labels never alter stored card kinds, titles or references.
+public enum BoardPresentation {
+    public static func defaultAssetTitle(_ kind: BoardCard.Kind, locale: String? = nil) -> String {
+        switch kind {
+        case .characters: L10n.string("Character sheets", table: "Board", locale: locale)
+        case .shots: L10n.string("Shot list", table: "Board", locale: locale)
+        default: kindTitle(kind, locale: locale)
+        }
+    }
+
+    public static func defaultNoteTitle(locale: String? = nil) -> String {
+        L10n.string("Untitled beat", table: "Board", locale: locale)
+    }
+
+    public static func defaultGroupTitle(locale: String? = nil) -> String {
+        L10n.string("Untitled group", table: "Board", locale: locale)
+    }
+
+    public static func kindTitle(_ kind: BoardCard.Kind, locale: String? = nil) -> String {
+        let key: String
+        switch kind {
+        case .draft: key = "Draft"
+        case .scene: key = "Scene"
+        case .note: key = "Note"
+        case .characters: key = "Characters"
+        case .shots: key = "Shots"
+        }
+        return L10n.string(key, table: "Board", locale: locale)
+    }
+
+    public static func sceneCount(_ count: Int, locale: String? = nil) -> String {
+        L10n.format("%lld scenes", count, table: "Board", locale: locale)
+    }
+
+    public static func sharedDraftCount(_ count: Int, locale: String? = nil) -> String {
+        L10n.format("Shared reference · %lld other drafts", count, table: "Board", locale: locale)
     }
 }

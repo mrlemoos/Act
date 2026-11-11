@@ -1,3 +1,4 @@
+import ActCore
 import AppKit
 import SwiftUI
 
@@ -99,43 +100,43 @@ final class ActApplicationDelegate: NSObject, NSApplicationDelegate, NSMenuItemV
     private func makeMenu() -> NSMenu {
         let menu = NSMenu()
         let app = NSMenu(title: "Act")
-        app.addItem(withTitle: "About Act", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        app.addItem(withTitle: L10n.string("About Act", table: "Menus"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         app.addItem(.separator())
-        app.addItem(withTitle: "Settings…", action: #selector(openSettings(_:)), keyEquivalent: ",").target = self
+        app.addItem(withTitle: L10n.string("Settings…", table: "Menus"), action: #selector(openSettings(_:)), keyEquivalent: ",").target = self
         app.addItem(.separator())
-        app.addItem(withTitle: "Hide Act", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        app.addItem(withTitle: "Quit Act", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        app.addItem(withTitle: L10n.string("Hide Act", table: "Menus"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        app.addItem(withTitle: L10n.string("Quit Act", table: "Menus"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(withTitle: "Act", action: nil, keyEquivalent: "").submenu = app
-        let file = NSMenu(title: "File")
-        file.addItem(withTitle: "New", action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "n").target = documents
-        file.addItem(withTitle: "New Project", action: #selector(newProject(_:)), keyEquivalent: "N").target = self
-        file.addItem(withTitle: "Open…", action: #selector(NSDocumentController.openDocument(_:)), keyEquivalent: "o").target = documents
+        let file = NSMenu(title: L10n.string("File", table: "Menus"))
+        file.addItem(withTitle: L10n.string("New", table: "Menus"), action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "n").target = documents
+        file.addItem(withTitle: L10n.string("New Project", table: "Menus"), action: #selector(newProject(_:)), keyEquivalent: "N").target = self
+        file.addItem(withTitle: L10n.string("Open…", table: "Menus"), action: #selector(NSDocumentController.openDocument(_:)), keyEquivalent: "o").target = documents
         file.addItem(.separator())
-        file.addItem(withTitle: "Close", action: #selector(closeCurrentDocument(_:)), keyEquivalent: "w").target = self
-        file.addItem(withTitle: "Save", action: #selector(saveCurrentDocument(_:)), keyEquivalent: "s").target = self
-        let saveAs = file.addItem(withTitle: "Save As…", action: #selector(saveCurrentDocumentAs(_:)), keyEquivalent: "S")
+        file.addItem(withTitle: L10n.string("Close", table: "Menus"), action: #selector(closeCurrentDocument(_:)), keyEquivalent: "w").target = self
+        file.addItem(withTitle: L10n.string("Save", table: "Menus"), action: #selector(saveCurrentDocument(_:)), keyEquivalent: "s").target = self
+        let saveAs = file.addItem(withTitle: L10n.string("Save As…", table: "Menus"), action: #selector(saveCurrentDocumentAs(_:)), keyEquivalent: "S")
         saveAs.target = self
         saveAs.keyEquivalentModifierMask = [.command, .shift]
-        file.addItem(withTitle: "Revert to Saved…", action: #selector(revertCurrentDocument(_:)), keyEquivalent: "").target = self
+        file.addItem(withTitle: L10n.string("Revert to Saved…", table: "Menus"), action: #selector(revertCurrentDocument(_:)), keyEquivalent: "").target = self
         file.addItem(.separator())
-        file.addItem(withTitle: "PDF Preview…", action: #selector(previewCurrentDocument(_:)), keyEquivalent: "p").target = self
-        menu.addItem(withTitle: "File", action: nil, keyEquivalent: "").submenu = file
-        let edit = NSMenu(title: "Edit")
-        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
-        edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        file.addItem(withTitle: L10n.string("PDF Preview…", table: "Menus"), action: #selector(previewCurrentDocument(_:)), keyEquivalent: "p").target = self
+        menu.addItem(withTitle: L10n.string("File", table: "Menus"), action: nil, keyEquivalent: "").submenu = file
+        let edit = NSMenu(title: L10n.string("Edit", table: "Menus"))
+        edit.addItem(withTitle: L10n.string("Undo", table: "Menus"), action: Selector(("undo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: L10n.string("Redo", table: "Menus"), action: Selector(("redo:")), keyEquivalent: "Z")
         edit.addItem(.separator())
-        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        edit.addItem(withTitle: L10n.string("Cut", table: "Menus"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: L10n.string("Copy", table: "Menus"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: L10n.string("Paste", table: "Menus"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: L10n.string("Select All", table: "Menus"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         edit.addItem(.separator())
-        let find = edit.addItem(withTitle: "Find…", action: #selector(NSTextView.performFindPanelAction(_:)), keyEquivalent: "f")
+        let find = edit.addItem(withTitle: L10n.string("Find…", table: "Menus"), action: #selector(NSTextView.performFindPanelAction(_:)), keyEquivalent: "f")
         find.tag = NSTextFinder.Action.showFindInterface.rawValue
-        menu.addItem(withTitle: "Edit", action: nil, keyEquivalent: "").submenu = edit
-        let window = NSMenu(title: "Window")
-        window.addItem(withTitle: "Minimise", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
-        window.addItem(withTitle: "Zoom", action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
-        menu.addItem(withTitle: "Window", action: nil, keyEquivalent: "").submenu = window
+        menu.addItem(withTitle: L10n.string("Edit", table: "Menus"), action: nil, keyEquivalent: "").submenu = edit
+        let window = NSMenu(title: L10n.string("Window", table: "Menus"))
+        window.addItem(withTitle: L10n.string("Minimise", table: "Menus"), action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        window.addItem(withTitle: L10n.string("Zoom", table: "Menus"), action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: L10n.string("Window", table: "Menus"), action: nil, keyEquivalent: "").submenu = window
         NSApp.windowsMenu = window
         return menu
     }
