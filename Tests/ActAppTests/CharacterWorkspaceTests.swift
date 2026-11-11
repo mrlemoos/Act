@@ -117,6 +117,78 @@ struct CharacterWorkspaceTests {
         #expect(loaded.characters[0].marks[0].paragraph == "A man with calloused hands is ORLEANS.")
     }
 
+    private func commandM(in host: TestEditorHost) -> Bool {
+        let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: host.window.windowNumber,
+                                     context: nil, characters: "m", charactersIgnoringModifiers: "m", isARepeat: false, keyCode: 46)!
+        let handled = host.textView.performKeyEquivalent(with: event)
+        TestEditorHost.pump()
+        return handled
+    }
+
+    @Test func commandMMarksTheSelectedNameAndLinksRepeatOccurrences() throws {
+        let source = "INT. ROOM - DAY\n\nORLEANS waits.\n\nLater, Orleans returns."
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let host = try TestEditorHost(source: source)
+        defer { host.close() }
+        host.document.fileURL = directory.appendingPathComponent("Draft.fountain")
+        host.window.makeFirstResponder(host.textView)
+        let first = (source as NSString).range(of: "ORLEANS")
+        host.textView.setSelectedRange(first)
+        #expect(commandM(in: host))
+        let second = (source as NSString).range(of: "Orleans")
+        host.textView.setSelectedRange(second)
+        #expect(commandM(in: host))
+        let characters = host.document.characterWorkspace.library.characters
+        #expect(characters.count == 1)
+        #expect(characters.first?.marks.map(\.nameRange) == [first, second])
+        let storage = try #require(host.textView.textStorage)
+        #expect(storage.attribute(.backgroundColor, at: second.location, effectiveRange: nil) != nil)
+        #expect(host.document.source == source)
+        #expect(host.document.characterWorkspace.error == nil)
+    }
+
+    @Test func commandMWithoutAMarkableSelectionIsLeftToTheWindow() throws {
+        let source = "INT. ROOM - DAY\n\nORLEANS waits."
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let host = try TestEditorHost(source: source)
+        defer { host.close() }
+        host.document.fileURL = directory.appendingPathComponent("Draft.fountain")
+        host.window.makeFirstResponder(host.textView)
+        for selection in [NSRange(location: 20, length: 0), (source as NSString).range(of: "INT. ROOM")] {
+            host.textView.setSelectedRange(selection)
+            #expect(!commandM(in: host))
+        }
+        #expect(host.document.characterWorkspace.library.characters.isEmpty)
+        #expect(host.document.characterWorkspace.error == nil)
+    }
+
+    @Test func contextMenuShowsCommandMOnTheItemItWouldUse() throws {
+        let source = "INT. ROOM - DAY\n\nORLEANS waits.\n\nORLEANS returns."
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let host = try TestEditorHost(source: source)
+        defer { host.close() }
+        host.document.fileURL = directory.appendingPathComponent("Draft.fountain")
+        host.window.makeFirstResponder(host.textView)
+        func shortcutTitles() -> [String] {
+            let layout = host.textView.layoutManager!, container = host.textView.textContainer!
+            let glyphs = layout.glyphRange(forCharacterRange: host.textView.selectedRange(), actualCharacterRange: nil)
+            let bounds = layout.boundingRect(forGlyphRange: glyphs, in: container).offsetBy(dx: host.textView.textContainerOrigin.x, dy: host.textView.textContainerOrigin.y)
+            let point = host.textView.convert(NSPoint(x: bounds.midX, y: bounds.midY), to: nil)
+            let event = NSEvent.mouseEvent(with: .rightMouseDown, location: point, modifierFlags: [], timestamp: 0, windowNumber: host.window.windowNumber,
+                                           context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
+            func walk(_ menu: NSMenu?) -> [NSMenuItem] { (menu?.items ?? []).flatMap { [$0] + walk($0.submenu) } }
+            return walk(host.textView.menu(for: event)).filter { $0.keyEquivalent == "m" && $0.keyEquivalentModifierMask == .command }.map(\.title)
+        }
+        host.textView.setSelectedRange((source as NSString).range(of: "ORLEANS"))
+        #expect(shortcutTitles() == ["Mark as New Character"])
+        #expect(commandM(in: host))
+        host.textView.setSelectedRange((source as NSString).range(of: "ORLEANS", options: .backwards))
+        #expect(shortcutTitles() == ["ORLEANS"])
+    }
+
     @Test func promptAndVersionsSurviveReopeningAndParagraphChanges() throws {
         let directory = try temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

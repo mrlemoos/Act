@@ -85,7 +85,7 @@ ACT_TEST_MODEL=/absolute/path/to/model.gguf swift test --filter GenerationTests
 
 ## Character reference sheets
 
-Select a character name inside an action paragraph, right-click and choose **Mark as New Character**. To add another introduction or appearance description to the same character, select that occurrence and choose **Link to Character**. Marks have persistent character colours and are stored separately from Fountain. Act does not discover or mark other characters automatically.
+Select a character name inside an action paragraph, right-click and choose **Mark as New Character**. To add another introduction or appearance description to the same character, select that occurrence and choose **Link to Character**. Command-M does the same from the keyboard: it links the selection to an existing character with the same name, ignoring case, or creates a new one. Without a markable selection, Command-M minimises the window as usual. Marks have persistent character colours and are stored separately from Fountain. Act does not discover or mark other characters automatically.
 
 Open **Characters** beside Screenplay and Shot list. In **Character tools**, choose `mlx_lm.generate` and an existing local MLX model folder. MLX models use safetensors weights; the shot planner's GGUF model is a different format. If needed, install the runtime separately:
 

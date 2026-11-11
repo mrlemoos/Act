@@ -12,7 +12,7 @@ Writers need visual references for selected characters without scanning every ch
 
 ## Intended behaviour
 
-In the editor, select a name inside an action paragraph and use the context menu to create a character or link to an existing character. Each character has a persistent, distinct colour. Only explicitly marked occurrences participate. The containing action paragraph includes contiguous action lines, ending at a blank line or another Fountain element type. Dialogue cues, headings and hidden notes cannot become character marks.
+In the editor, select a name inside an action paragraph and use the context menu to create a character or link to an existing character. Command-M marks the selection from the keyboard, linking it to an existing character whose name matches case-insensitively or creating one; without a markable selection it falls through to Minimise. Each character has a persistent, distinct colour. Only explicitly marked occurrences participate. The containing action paragraph includes contiguous action lines, ending at a blank line or another Fountain element type. Dialogue cues, headings and hidden notes cannot become character marks.
 
 Characters is a workspace beside Screenplay and Shot list. Local MLX extracts explicit physical attributes from marked paragraphs. Each attribute retains a verbatim evidence quote. Missing traits remain unspecified; props, status and personality are not appearance. Linked occurrences contribute to one character, with differing values for the same attribute flagged for review. Extraction fills an empty prompt but never overwrites an existing prompt. Rebuilding a non-empty prompt from extracted details requires confirmation.
 

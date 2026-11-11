@@ -576,18 +576,36 @@ final class ScreenplayTextView: NSTextView {
         }
     }
 
+    /// The selected name when it can be marked, with the existing character Command-M would link it to.
+    private func markableSelection() -> (name: String, match: CharacterReference?)? {
+        guard let document = screenplayDocument, selectedRange().length > 0,
+              let block = try? CharacterActionBlock.selected(in: string, range: selectedRange(),
+                  screenplay: document.characterWorkspace.parsedScreenplay(for: string)) else { return nil }
+        let match = document.characterWorkspace.library.characters.first { $0.name.caseInsensitiveCompare(block.name) == .orderedSame }
+        return (block.name, match)
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command, event.charactersIgnoringModifiers == "m",
+           window?.firstResponder === self, !hasMarkedText(), let markable = markableSelection() {
+            markSelection(characterID: markable.match?.id)
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
     override func menu(for event: NSEvent) -> NSMenu? {
         let menu = super.menu(for: event) ?? NSMenu()
-        guard let document = screenplayDocument, selectedRange().length > 0,
-              (try? CharacterActionBlock.selected(in: string, range: selectedRange(),
-                  screenplay: document.characterWorkspace.parsedScreenplay(for: string))) != nil else { return menu }
+        guard let document = screenplayDocument, let markable = markableSelection() else { return menu }
         menu.addItem(.separator())
-        let create = menu.addItem(withTitle: L10n.string("Mark as New Character", table: "Writing"), action: #selector(markCharacter(_:)), keyEquivalent: "")
+        let create = menu.addItem(withTitle: L10n.string("Mark as New Character", table: "Writing"), action: #selector(markCharacter(_:)),
+                                  keyEquivalent: markable.match == nil ? "m" : "")
         create.target = self
         if !document.characterWorkspace.library.characters.isEmpty {
             let link = NSMenu(title: L10n.string("Link to Character", table: "Writing"))
             for character in document.characterWorkspace.library.characters {
-                let item = link.addItem(withTitle: character.name, action: #selector(markCharacter(_:)), keyEquivalent: "")
+                let item = link.addItem(withTitle: character.name, action: #selector(markCharacter(_:)),
+                                        keyEquivalent: character.id == markable.match?.id ? "m" : "")
                 item.target = self; item.representedObject = character.id.uuidString
             }
             let item = menu.addItem(withTitle: L10n.string("Link to Character", table: "Writing"), action: nil, keyEquivalent: "")
@@ -597,6 +615,10 @@ final class ScreenplayTextView: NSTextView {
     }
 
     @objc func markCharacter(_ sender: NSMenuItem) {
+        markSelection(characterID: (sender.representedObject as? String).flatMap(UUID.init(uuidString:)))
+    }
+
+    private func markSelection(characterID id: UUID?) {
         guard let document = screenplayDocument else { return }
         let selection = selectedRange()
         if document.fileURL == nil {
@@ -604,7 +626,6 @@ final class ScreenplayTextView: NSTextView {
             guard document.fileURL != nil else { return }
         }
         document.characterWorkspace.prepare(screenplayURL: document.fileURL, source: document.source)
-        let id = (sender.representedObject as? String).flatMap(UUID.init(uuidString:))
         _ = document.characterWorkspace.mark(selection: selection, characterID: id)
         (delegate as? ScreenplayEditor.Coordinator)?.format()
         if let error = document.characterWorkspace.error {
