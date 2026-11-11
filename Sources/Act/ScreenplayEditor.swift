@@ -68,7 +68,7 @@ struct ScreenplayEditor: NSViewRepresentable {
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         context.coordinator.parent = self
         guard let text = context.coordinator.textView else { return }
-        if text.string != document.source {
+        if !text.string.isLiterallyEqual(to: document.source) {
             let ranges = text.selectedRanges
             text.string = document.source
             let count = (document.source as NSString).length
@@ -145,7 +145,7 @@ struct ScreenplayEditor: NSViewRepresentable {
             let cursor = textView.selectedRange().location
             let cursorElement = script?.elements.first { NSLocationInRange(cursor, $0.range) }?.range
             let columnWidth = textView.textContainer?.containerSize.width ?? 624
-            if formattedSource == source, formattedSettings == parent.settings,
+            if formattedSource?.isLiterallyEqual(to: source) == true, formattedSettings == parent.settings,
                formattedSourceMode == parent.sourceMode, formattedWidth == columnWidth,
                formattedCursorElement == cursorElement {
                 let typingAttributes = textView.typingAttributes
@@ -170,8 +170,8 @@ struct ScreenplayEditor: NSViewRepresentable {
                 for element in script.elements {
                     guard NSMaxRange(element.range) <= storage.length else { continue }
                     let style = base.mutableCopy() as! NSMutableParagraphStyle
-                    let name = String(describing: element.kind).lowercased()
-                    if name.contains("character") {
+                    switch element.kind {
+                    case .character:
                         style.headIndent = min(190, columnWidth * 0.30)
                         style.firstLineHeadIndent = style.headIndent
                         let literalCue = FountainParser.displayText(element)
@@ -183,11 +183,12 @@ struct ScreenplayEditor: NSViewRepresentable {
                             style.tailIndent = -width
                             screenplayTextView?.continuations.append(.init(range: element.range, text: suffix, font: font))
                         }
+                    case .parenthetical: style.headIndent = min(145, columnWidth * 0.23); style.firstLineHeadIndent = style.headIndent; style.tailIndent = -min(125, columnWidth * 0.20)
+                    case .dialogue: style.headIndent = min(105, columnWidth * 0.17); style.firstLineHeadIndent = style.headIndent; style.tailIndent = -style.headIndent
+                    case .transition: style.alignment = .right
+                    case .centred: style.alignment = .center
+                    default: break
                     }
-                    else if name.contains("parenthetical") { style.headIndent = min(145, columnWidth * 0.23); style.firstLineHeadIndent = style.headIndent; style.tailIndent = -min(125, columnWidth * 0.20) }
-                    else if name.contains("dialogue") { style.headIndent = min(105, columnWidth * 0.17); style.firstLineHeadIndent = style.headIndent; style.tailIndent = -style.headIndent }
-                    else if name.contains("transition") { style.alignment = .right }
-                    else if element.kind == .centred { style.alignment = .center }
                     if element.kind == .sceneHeading {
                         style.paragraphSpacingBefore = CGFloat(missingBlankLines[element.range.location, default: 0]) * lineHeight
                         if parent.settings.boldSluglines {
@@ -202,7 +203,8 @@ struct ScreenplayEditor: NSViewRepresentable {
                     } else if [.note, .boneyard, .synopsis].contains(element.kind) {
                         storage.addAttribute(.foregroundColor, value: NSColor.secondaryLabelColor, range: element.range)
                     }
-                    applyEmphasis(in: element.range, storage: storage, baseFont: font)
+                    let hasEmphasis = element.text.contains { $0 == "*" || $0 == "_" }
+                    if hasEmphasis { applyEmphasis(in: element.range, source: source, storage: storage, baseFont: font) }
                     if element.kind == .titlePage, element.text.first?.isWhitespace != true {
                         let text = element.text as NSString
                         let colon = text.range(of: ":")
@@ -212,7 +214,7 @@ struct ScreenplayEditor: NSViewRepresentable {
                         }
                     }
                     if !NSLocationInRange(cursor, element.range) {
-                        fadeMarkers(in: element.range, storage: storage)
+                        fadeMarkers(in: element, hasEmphasis: hasEmphasis, source: source, storage: storage)
                     }
                 }
                 collapseSurplusBlankLines(in: script, storage: storage, font: font)
@@ -285,13 +287,12 @@ struct ScreenplayEditor: NSViewRepresentable {
             }
         }
 
-        private let emphasisPattern = #"(?<!\\)(\*{1,3}|_)(?=\S)(.+?\S|\S)\1"#
+        private static let emphasis = try! NSRegularExpression(pattern: #"(?<!\\)(\*{1,3}|_)(?=\S)(.+?\S|\S)\1"#)
+        private static let controls = try! NSRegularExpression(pattern: #"(?m)^(?:[.@!~>#]+|={3,})|(?<!\\)\[\[|(?<!\\)\]\]|\s#[^#\r\n]+#\s*$|\^$"#)
 
-        private func applyEmphasis(in range: NSRange, storage: NSTextStorage, baseFont: NSFont) {
-            guard let expression = try? NSRegularExpression(pattern: emphasisPattern) else { return }
-            let source = storage.string as NSString
-            for match in expression.matches(in: storage.string, range: range) {
-                let marker = source.substring(with: match.range(at: 1))
+        private func applyEmphasis(in range: NSRange, source: String, storage: NSTextStorage, baseFont: NSFont) {
+            for match in Self.emphasis.matches(in: source, range: range) {
+                let marker = (source as NSString).substring(with: match.range(at: 1))
                 let content = match.range(at: 2)
                 if marker == "_" {
                     storage.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: content)
@@ -304,15 +305,14 @@ struct ScreenplayEditor: NSViewRepresentable {
             }
         }
 
-        private func fadeMarkers(in range: NSRange, storage: NSTextStorage) {
-            let controls = #"(?m)^(?:[.@!~>#]+|={3,})|(?<!\\)\[\[|(?<!\\)\]\]|\s#[^#\r\n]+#\s*$|\^$"#
-            if let expression = try? NSRegularExpression(pattern: controls) {
-                for match in expression.matches(in: storage.string, range: range) {
+        private func fadeMarkers(in element: FountainElement, hasEmphasis: Bool, source: String, storage: NSTextStorage) {
+            if element.text.first.map(".@!~>#=".contains) == true || element.text.contains(where: "[]#^".contains) {
+                for match in Self.controls.matches(in: source, range: element.range) {
                     storage.addAttribute(.foregroundColor, value: NSColor.quaternaryLabelColor, range: match.range)
                 }
             }
-            guard let emphasis = try? NSRegularExpression(pattern: emphasisPattern) else { return }
-            for match in emphasis.matches(in: storage.string, range: range) {
+            guard hasEmphasis else { return }
+            for match in Self.emphasis.matches(in: source, range: element.range) {
                 let marker = match.range(at: 1)
                 storage.addAttribute(.foregroundColor, value: NSColor.quaternaryLabelColor, range: marker)
                 storage.addAttribute(.foregroundColor, value: NSColor.quaternaryLabelColor, range: NSRange(location: NSMaxRange(match.range) - marker.length, length: marker.length))

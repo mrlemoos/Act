@@ -27,6 +27,12 @@ public struct DocumentText: Equatable, Sendable {
     }
 }
 
+public extension String {
+    /// UTF-16 code unit comparison. Swift `==` applies Unicode canonical equivalence, which costs
+    /// milliseconds on feature-length scripts bridged from AppKit and hides NFC/NFD source edits.
+    func isLiterallyEqual(to other: String) -> Bool { (self as NSString).isEqual(to: other) }
+}
+
 public enum DocumentError: LocalizedError, Sendable {
     case invalidUTF8
     case externalChange

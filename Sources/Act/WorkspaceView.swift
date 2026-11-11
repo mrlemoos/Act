@@ -23,7 +23,7 @@ struct WorkspaceView: View {
         _workspace = State(initialValue: initialWorkspace)
     }
 
-    private var screenplay: FountainScreenplay { FountainParser.parse(document.source) }
+    private var screenplay: FountainScreenplay { document.screenplay }
     private var outlineEntries: [FountainOutlineEntry] { FountainOutline.entries(in: screenplay) }
 
     var body: some View {

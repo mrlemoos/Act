@@ -45,7 +45,9 @@ public enum FountainParser {
             var start = 0, end = 0, contentsEnd = 0
             ns.getLineStart(&start, end: &end, contentsEnd: &contentsEnd, for: NSRange(location: position, length: 0))
             let range = NSRange(location: start, length: contentsEnd - start)
-            lines.append((ns.substring(with: range), range))
+            var line = ns.substring(with: range)
+            line.makeContiguousUTF8()
+            lines.append((line, range))
             position = end
         }
         var commentState: FountainElement.Kind?
@@ -142,6 +144,7 @@ public enum FountainParser {
     /// Delimiters are scanned before element classification, including comments starting mid-line.
     /// Source text and ranges remain untouched, even for unclosed comments.
     private static func stripComments(_ raw: String, state: inout FountainElement.Kind?) -> (text: String, hiddenKind: FountainElement.Kind?) {
+        if state == nil, !raw.contains("/*"), !raw.contains("[[") { return (raw, nil) }
         var visible = ""
         var hiddenKind = state
         var index = raw.startIndex

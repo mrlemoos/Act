@@ -65,12 +65,14 @@ final class FountainDocument: NSDocument, ObservableObject {
         if requestedWorkspace == .board { requestedWorkspace = .screenplay }
     }
 
+    var screenplay: FountainScreenplay { characterWorkspace.parsedScreenplay(for: source) }
+
     var workspaceUndoManager: UndoManager? {
         requestedWorkspace == .board ? projectBoard?.undoManager : undoManager
     }
 
     func replaceSource(_ newSource: String) {
-        guard source != newSource else { return }
+        guard !source.isLiterallyEqual(to: newSource) else { return }
         let previous = source
         undoManager?.registerUndo(withTarget: self) { target in target.replaceSource(previous) }
         undoManager?.setActionName(L10n.string("Writing", table: "Writing"))

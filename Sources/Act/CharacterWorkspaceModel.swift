@@ -52,7 +52,7 @@ final class CharacterWorkspaceModel: ObservableObject {
     var selectedConnection: ImageAgentConnection? { availableAgents.first { $0.agent == selectedAgent } }
 
     func parsedScreenplay(for source: String) -> FountainScreenplay {
-        if let cachedScreenplay, cachedScreenplay.source == source { return cachedScreenplay }
+        if let cachedScreenplay, cachedScreenplay.source.isLiterallyEqual(to: source) { return cachedScreenplay }
         let screenplay = FountainParser.parse(source)
         cachedScreenplay = screenplay
         return screenplay
@@ -93,7 +93,7 @@ final class CharacterWorkspaceModel: ObservableObject {
     }
 
     func updateSource(_ newSource: String) {
-        guard newSource != source else { return }
+        guard !newSource.isLiterallyEqual(to: source) else { return }
         if !library.characters.isEmpty { library.reconcile(from: source, to: newSource) }
         source = newSource
     }

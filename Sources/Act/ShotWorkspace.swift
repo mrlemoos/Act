@@ -255,7 +255,7 @@ struct ShotWorkspace: View {
         self.model = document.shotWorkspace
     }
 
-    private var screenplay: FountainScreenplay { FountainParser.parse(document.source) }
+    private var screenplay: FountainScreenplay { document.screenplay }
     private var scenes: [FountainScene] { screenplay.scenes }
     private var scene: FountainScene? { scenes.first { $0.id == model.selectedSceneID } ?? scenes.first }
     private var anchors: [SceneAnchor] { scenes.map { SceneAnchor(id: $0.id, heading: $0.heading, text: $0.text) } }

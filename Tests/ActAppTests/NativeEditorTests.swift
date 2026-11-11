@@ -95,6 +95,20 @@ struct NativeEditorTests {
         }
     }
 
+    @Test func canonicallyEquivalentEditsKeepTheirOwnBytesAndRanges() throws {
+        let composed = "INT. CAF\u{C9} - DAY"
+        let decomposed = "INT. CAFE\u{301} - DAY"
+        let document = FountainDocument()
+        try document.read(from: Data(composed.utf8), ofType: "dev.act.fountain")
+        document.undoManager?.groupsByEvent = false
+        _ = document.characterWorkspace.parsedScreenplay(for: document.source)
+        document.undoManager?.beginUndoGrouping()
+        document.replaceSource(decomposed)
+        document.undoManager?.endUndoGrouping()
+        #expect(try document.data(ofType: "dev.act.fountain") == Data(decomposed.utf8))
+        #expect(document.characterWorkspace.parsedScreenplay(for: document.source).elements.first?.range.length == (decomposed as NSString).length)
+    }
+
     @Test func editingAndUndoPreserveTheUTF8ByteOrderMarker() throws {
         let source = "INT. CAFÉ - DAY\r\n\r\nÉva waits."
         let bytes = Data([0xEF, 0xBB, 0xBF]) + Data(source.utf8)
