@@ -13,7 +13,8 @@
     "breakdown",
     "find-rc",
     "unit-test",
-    "behavioural-test"
+    "behavioural-test",
+    "e2e-test"
   ],
   "cadence": "batch",
   "hooks": true
