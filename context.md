@@ -25,3 +25,5 @@ Active specification: [Act screenwriting v1](docs/specs/screenwriting/spec.md). 
 [Project board](docs/specs/project-board.md) defines the implemented visual project organisation follow-up; native gesture/relaunch verification remains open.
 
 [App localisation](docs/specs/localisation.md) adds seven interface locales through native macOS language preferences; document content remains literal.
+
+[Character, slugline and transition autocomplete](docs/specs/autocomplete.md) is a draft spec for inline completions on cues, scene headings and transitions; Fountain source stays authoritative.
