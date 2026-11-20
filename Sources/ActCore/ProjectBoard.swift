@@ -105,6 +105,86 @@ public enum ProjectBoardStore {
     }
 }
 
+public enum BoardWorkspaceTarget: Equatable, Sendable {
+    case screenplay
+    case characters
+    case shots
+}
+
+public struct BoardOpenPlan: Equatable, Sendable {
+    public var screenplayURL: URL
+    public var workspace: BoardWorkspaceTarget
+    public var sceneID: String?
+    public var shotListURL: URL?
+}
+
+extension ProjectBoard {
+    public func linkedSceneIDs(for draftID: UUID) -> Set<String> {
+        Set(cards.filter { $0.kind == .scene && $0.draftID == draftID }.compactMap(\.anchor?.id))
+    }
+
+    public func draftFileName(for card: BoardCard) -> String? {
+        if let path = card.path { return URL(fileURLWithPath: path).lastPathComponent }
+        return cards.first(where: { $0.id == card.draftID })?.path.map { URL(fileURLWithPath: $0).lastPathComponent }
+    }
+
+    public func openPlan(for card: BoardCard) -> BoardOpenPlan? {
+        guard card.kind != .note else { return nil }
+        let owner = cards.first { $0.id == card.draftID }
+        let screenplayURL: URL?
+        switch card.kind {
+        case .draft: screenplayURL = resolvedURL(for: card)
+        case .shots: screenplayURL = owner.flatMap { resolvedURL(for: $0) }
+        case .characters, .scene: screenplayURL = owner.flatMap { resolvedURL(for: $0) }
+        case .note: return nil
+        }
+        guard let screenplayURL else { return nil }
+        let workspace: BoardWorkspaceTarget = switch card.kind {
+        case .characters: .characters
+        case .shots: .shots
+        default: .screenplay
+        }
+        return BoardOpenPlan(screenplayURL: screenplayURL, workspace: workspace,
+            sceneID: card.kind == .scene ? card.anchor?.id : nil,
+            shotListURL: card.kind == .shots ? card.path.map(URL.init(fileURLWithPath:)) : nil)
+    }
+
+    public func linkedSceneSelection(for card: BoardCard, source: String) -> String? {
+        guard card.kind == .scene, sceneState(for: card, source: source) == .current else { return nil }
+        return card.anchor?.id
+    }
+
+    public mutating func toggleSharedReference(assetID: UUID, draftID: UUID) {
+        guard let index = cards.firstIndex(where: { $0.id == assetID }),
+              cards[index].kind == .characters || cards[index].kind == .shots,
+              cards[index].draftID != draftID,
+              cards.contains(where: { $0.id == draftID && $0.kind == .draft }) else { return }
+        if cards[index].sharedWith.contains(draftID) { cards[index].sharedWith.removeAll { $0 == draftID } }
+        else { cards[index].sharedWith.append(draftID) }
+    }
+
+    public mutating func relinkPath(_ path: String, for cardID: UUID) {
+        guard let index = cards.firstIndex(where: { $0.id == cardID }) else { return }
+        cards[index].path = path
+        if cards[index].kind == .draft { cards[index].title = URL(fileURLWithPath: path).lastPathComponent }
+    }
+
+    public func characterPreviewImageURL(for card: BoardCard, fileManager: FileManager = .default) -> URL? {
+        guard card.kind == .characters, let screenplay = resolvedURL(for: card) else { return nil }
+        let directory = CharacterLibraryStore.directory(for: screenplay)
+        guard let data = try? Data(contentsOf: directory.appendingPathComponent("characters.json")),
+              let library = try? CharacterLibraryStore.decode(data),
+              let version = library.characters.compactMap(\.activeVersion).first,
+              CharacterLibraryStore.safeImagePath(version.imageFile) else { return nil }
+        let libraryRoot = directory.resolvingSymlinksInPath()
+        let imageURL = directory.appendingPathComponent(version.imageFile).resolvingSymlinksInPath()
+        let imagesRoot = libraryRoot.appendingPathComponent("images")
+        guard imageURL.path.hasPrefix(imagesRoot.path + "/"),
+              let size = try? imageURL.resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= 25_165_824,
+              fileManager.fileExists(atPath: imageURL.path) else { return nil }
+        return imageURL
+    }
+}
 
 /// Localised board labels never alter stored card kinds, titles or references.
 public enum BoardPresentation {

@@ -66,6 +66,11 @@ struct ProjectBoardView: View {
                             Button(L10n.string("Link Fountain draft…", table: "Board")) { document.chooseDraft() }
                         }.padding(60).allowsHitTesting(true)
                     }
+                    BoardNavigationOverlay { delta, factor, point in
+                        document.change(L10n.string("Navigate board", table: "Board")) { board in
+                            board.navigate(by: delta, magnification: factor, around: point)
+                        }
+                    }
                 }.clipped()
                 .overlay(alignment: .bottomLeading) {
                     Text(L10n.string("Scroll to pan · Pinch to zoom · Drag card headers to arrange", table: "Board"))
@@ -75,11 +80,18 @@ struct ProjectBoardView: View {
             }
         }
         .sheet(item: $sceneDraft) { draft in
+            let linked = document.board.linkedSceneIDs(for: draft.id)
+            let available = scenes.filter { !linked.contains($0.id) }
             VStack(alignment: .leading, spacing: 16) {
                 Text(L10n.format("Add scenes from %@", draft.title, table: "Board")).font(.headline)
-                List(scenes) { scene in
-                    Button(scene.heading) { document.addScene(scene, draft: draft) }
-                }.frame(minWidth: 500, minHeight: 300)
+                if available.isEmpty {
+                    Text(L10n.string("Every scene from this draft is already on the board.", table: "Board"))
+                        .foregroundStyle(.secondary)
+                } else {
+                    List(available) { scene in
+                        Button(scene.heading) { document.addScene(scene, draft: draft) }
+                    }.frame(minWidth: 500, minHeight: 300)
+                }
                 Button(L10n.string("Done", table: "Board")) { sceneDraft = nil }.keyboardShortcut(.defaultAction)
             }.padding(24)
         }
@@ -141,7 +153,10 @@ struct ProjectBoardView: View {
                 .contentShape(Rectangle()).highPriorityGesture(moveGesture(card.id))
             if card.kind == .note {
                 TextField(L10n.string("Beat title", table: "Board"), text: binding(card, \.title)).font(.system(size: 18, weight: .medium, design: .serif)).textFieldStyle(.plain)
-            } else { Text(card.title).font(.system(size: 18, weight: .medium, design: .serif)).lineLimit(3) }
+            } else {
+                Text(card.kind == .draft ? (document.board.draftFileName(for: card) ?? card.title) : card.title)
+                    .font(.system(size: 18, weight: .medium, design: .serif)).lineLimit(3)
+            }
             if card.kind == .draft {
                 Text(sceneCount(card)).font(.caption).foregroundStyle(.secondary)
             } else if let draft = document.board.cards.first(where: { $0.id == card.draftID }) {
@@ -190,9 +205,7 @@ struct ProjectBoardView: View {
                 ForEach(document.board.cards.filter { $0.kind == .draft && $0.id != card.draftID }) { draft in
                     Button(L10n.format(card.sharedWith.contains(draft.id) ? "Unlink %@" : "Link %@", draft.title, table: "Board")) {
                         document.change(L10n.string("Share asset reference", table: "Board")) { board in
-                            guard let i = board.cards.firstIndex(where: { $0.id == card.id }) else { return }
-                            if board.cards[i].sharedWith.contains(draft.id) { board.cards[i].sharedWith.removeAll { $0 == draft.id } }
-                            else { board.cards[i].sharedWith.append(draft.id) }
+                            board.toggleSharedReference(assetID: card.id, draftID: draft.id)
                         }
                     }
                 }
@@ -253,19 +266,39 @@ struct ProjectBoardView: View {
     }
     private func thumbnail(_ card: BoardCard) -> NSImage? {
         _ = refresh
-        guard let url = document.board.resolvedURL(for: card) else { return nil }
-        if let draft = NSDocumentController.shared.document(for: url) as? FountainDocument,
+        if let url = document.board.resolvedURL(for: card),
+           let draft = NSDocumentController.shared.document(for: url) as? FountainDocument,
            let character = draft.characterWorkspace.library.characters.first,
            let data = try? draft.characterWorkspace.imageData(for: character.activeVersion) { return NSImage(data: data) }
-        let directory = CharacterLibraryStore.directory(for: url)
-        guard let data = try? Data(contentsOf: directory.appendingPathComponent("characters.json")),
-              let library = try? CharacterLibraryStore.decode(data),
-              let version = library.characters.compactMap(\.activeVersion).first else { return nil }
-        let imageURL = directory.appendingPathComponent(version.imageFile).resolvingSymlinksInPath()
-        guard imageURL.path.hasPrefix(directory.resolvingSymlinksInPath().path + "/images/"),
-              let size = try? imageURL.resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= 25_165_824,
-              let bytes = try? Data(contentsOf: imageURL), let image = try? CharacterImageGenerator.validate(bytes) else { return nil }
+        guard let imageURL = document.board.characterPreviewImageURL(for: card),
+              let bytes = try? Data(contentsOf: imageURL),
+              let image = try? CharacterImageGenerator.validate(bytes) else { return nil }
         return NSImage(data: image.data)
+    }
+}
+
+struct BoardNavigationOverlay: NSViewRepresentable {
+    var navigate: (BoardPoint, Double, BoardPoint) -> Void
+    func makeNSView(context: Context) -> BoardNavigationOverlayView { let view = BoardNavigationOverlayView(); view.navigate = navigate; return view }
+    func updateNSView(_ nsView: BoardNavigationOverlayView, context: Context) { nsView.navigate = navigate }
+}
+
+final class BoardNavigationOverlayView: NSView {
+    var navigate: ((BoardPoint, Double, BoardPoint) -> Void)?
+    override var isFlipped: Bool { true }
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard bounds.contains(point) else { return nil }
+        switch NSApp.currentEvent?.type {
+        case .scrollWheel, .magnify, .smartMagnify: return self
+        default: return nil
+        }
+    }
+    override func scrollWheel(with event: NSEvent) {
+        navigate?(BoardPoint(x: event.scrollingDeltaX, y: event.scrollingDeltaY), 1, BoardPoint())
+    }
+    override func magnify(with event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        navigate?(BoardPoint(), max(0.1, 1 + event.magnification), BoardPoint(x: point.x, y: point.y))
     }
 }
 

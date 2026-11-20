@@ -22,7 +22,13 @@ Native view renders were produced at 1280 and 820 points in light/dark appearanc
 
 Card drag attempts did not establish movement. Later attempts returned CUA `ScreenCaptureKit.SCStreamErrorDomain Code=-3812` and `noWindowsAvailable`. Gesture priority was adjusted, but successful native drag and pinch evidence is still required. Do not interpret tested coordinate transformations as physical trackpad proof.
 
+A transparent scroll/pinch overlay now receives trackpad navigation even when the pointer is over cards; confirm on desktop that card-header drags and background pans still feel correct.
+
 Group dragging, relinking dialogs, asset opening/sharing, close/reopen and crash/relaunch recovery still need complete desktop workflow checks. Native persistence APIs and conflict tests cover state preservation, not these OS interaction paths. Parent specification and relevant tickets remain active.
+
+## Cloud agent (2025-11-20)
+
+The Linux cloud agent could not run `swift test` or `scripts/build-app.sh`. It added ActCore coverage for open routing, explicit cross-draft sharing, relink path updates, linked-scene filtering, and validated character preview paths. Re-run the validation commands on macOS before closing the parent specification.
 
 ## Reference contracts
 
