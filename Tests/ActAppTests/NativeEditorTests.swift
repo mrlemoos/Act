@@ -95,6 +95,36 @@ struct NativeEditorTests {
         }
     }
 
+    @Test func tabAcceptsCompletionAsOneUndoStepInSourceMode() throws {
+        let source = "INT. ROOM - DAY\n\nMARA\nHello.\n\nMA"
+        let host = try TestEditorHost(source: source, sourceMode: true)
+        defer { host.close() }
+        let caret = NSRange(location: (source as NSString).length, length: 0)
+        host.textView.setSelectedRange(caret)
+        host.insert("R", selection: caret)
+        host.coordinator.refreshAutocomplete()
+        #expect(host.coordinator.autocomplete.isVisible)
+        #expect(host.command(#selector(NSTextView.insertTab(_:))))
+        #expect(host.document.source == "INT. ROOM - DAY\n\nMARA\nHello.\n\nMARA")
+        host.undo()
+        #expect(host.document.source == "INT. ROOM - DAY\n\nMARA\nHello.\n\nMAR")
+    }
+
+    @Test func returnAcceptsCompletionWithoutRewritingSpacingWhenListVisible() throws {
+        let source = "INT. ROOM - DAY\n\n"
+        let host = try TestEditorHost(source: source)
+        defer { host.close() }
+        let caret = NSRange(location: (source as NSString).length, length: 0)
+        host.textView.setSelectedRange(caret)
+        host.insert("CU", selection: caret)
+        host.coordinator.refreshAutocomplete()
+        #expect(host.coordinator.autocomplete.isVisible)
+        #expect(host.command(#selector(NSTextView.insertNewline(_:))))
+        #expect(host.document.source == "INT. ROOM - DAY\n\nCUT TO:")
+        host.undo()
+        #expect(host.document.source == source + "CU")
+    }
+
     @Test func editingAndUndoPreserveTheUTF8ByteOrderMarker() throws {
         let source = "INT. CAFÉ - DAY\r\n\r\nÉva waits."
         let bytes = Data([0xEF, 0xBB, 0xBF]) + Data(source.utf8)

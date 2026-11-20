@@ -1,0 +1,9 @@
+"Time of day|DAY" = "DAY";
+"Time of day|NIGHT" = "NIGHT";
+"Time of day|DAWN" = "DAWN";
+"Time of day|DUSK" = "DUSK";
+"Time of day|MORNING" = "MORNING";
+"Time of day|EVENING" = "EVENING";
+"Time of day|LATER" = "LATER";
+"Time of day|CONTINUOUS" = "CONTINUOUS";
+"Time of day|SAME" = "SAME";

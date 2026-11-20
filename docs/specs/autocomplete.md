@@ -67,17 +67,17 @@ Acceptance replaces only the current line's completable span (the typable prefix
 
 ## Acceptance checks
 
-- [ ] After a blank line, typing a prefix of an existing cue, heading or transition shows a ranked list in both formatted and source modes.
-- [ ] Forced `@`, `.` and `>` prefixes, unfinished cues (classified only with probe text), Unicode names and mixed-case extensions such as `(V.O.)` complete correctly.
-- [ ] Built-in scene-heading prefixes and harvested locations and times of day can be accepted; an existing `#n#` suffix on the line is preserved.
-- [ ] Built-in and harvested transitions insert text that the current parser classifies as a transition.
-- [ ] Character-library names appear only when the current name prefix is uppercase; mixed-case or lowercase typing does not offer them; accepting a library name inserts it in uppercase and can classify as a cue above as-yet-unwritten dialogue.
-- [ ] Built-in times of day follow the app locale for all seven supported locales, with en-GB fallback; times already used in the screenplay are offered in the writer's form, in every locale, and rank above unused built-in terms; accepting a term does not rewrite it if the app language later changes.
-- [ ] `(CONT'D)` never appears as a completion, including when an explicit source continuation already exists or automatic presentation continuations are enabled.
-- [ ] Tab or Return accepts the highlighted completion as one undo step; Escape dismisses; IME and modified Return are untouched; with the list closed, Return spacing is unchanged.
-- [ ] Title page, notes, boneyard, dialogue, parentheticals and mid-action lines show no list. Probe text is never written to the document.
-- [ ] Completing a suggestion does not normalise, reorder or otherwise rewrite any other Fountain source, and does not modify shot lists, character libraries or the project board.
-- [ ] Relevant automated checks pass; native keyboard and list presentation are recorded as evidence.
+- [ ] After a blank line, typing a prefix of an existing cue, heading or transition shows a ranked list in both formatted and source modes. ActCore ranking is covered by unit tests; native list presentation in formatted mode still needs Leonardo’s Mac verification.
+- [x] Forced `@`, `.` and `>` prefixes, unfinished cues (classified only with probe text), Unicode names and mixed-case extensions such as `(V.O.)` complete correctly.
+- [x] Built-in scene-heading prefixes and harvested locations and times of day can be accepted; an existing `#n#` suffix on the line is preserved.
+- [x] Built-in and harvested transitions insert text that the current parser classifies as a transition.
+- [x] Character-library names appear only when the current name prefix is uppercase; mixed-case or lowercase typing does not offer them; accepting a library name inserts it in uppercase and can classify as a cue above as-yet-unwritten dialogue.
+- [x] Built-in times of day follow the app locale for all seven supported locales, with en-GB fallback; times already used in the screenplay are offered in the writer's form, in every locale, and rank above unused built-in terms; accepting a term does not rewrite it if the app language later changes.
+- [x] `(CONT'D)` never appears as a completion, including when an explicit source continuation already exists or automatic presentation continuations are enabled.
+- [ ] Tab or Return accepts the highlighted completion as one undo step; Escape dismisses; IME and modified Return are untouched; with the list closed, Return spacing is unchanged. Automated coverage exists in `NativeEditorTests` for Tab/Return accept and closed Return spacing; native IME, Escape, click-outside and modified Return still need Mac verification.
+- [x] Title page, notes, boneyard, dialogue, parentheticals and mid-action lines show no list. Probe text is never written to the document.
+- [x] Completing a suggestion does not normalise, reorder or otherwise rewrite any other Fountain source, and does not modify shot lists, character libraries or the project board.
+- [ ] Relevant automated checks pass; native keyboard and list presentation are recorded as evidence. ActCore unit tests added in cloud agent; full `swift test` and `scripts/build-app.sh` must run on macOS.
 
 ## Decisions and contracts
 
@@ -107,7 +107,7 @@ scripts/build-app.sh
 node .galicia/check.ts
 ```
 
-Record unit results for context, ranking, locale lists, library gating and replacement ranges, plus native evidence for accept, dismiss, undo and Return-spacing coexistence. Build success alone is insufficient. No implementation or runtime validation has occurred for this change yet.
+Record unit results for context, ranking, locale lists, library gating and replacement ranges, plus native evidence for accept, dismiss, undo and Return-spacing coexistence. Build success alone is insufficient. Cloud agent 20 Nov 2026: added `FountainAutocomplete` / `FountainAutocompleteTests` and native editor wiring; Mac build and UI inspection remain for Leonardo.
 
 ## Exclusions
 
