@@ -1,0 +1,9 @@
+"Time of day|DAY" = "JOUR";
+"Time of day|NIGHT" = "NUIT";
+"Time of day|DAWN" = "AUBE";
+"Time of day|DUSK" = "CRÉPUSCULE";
+"Time of day|MORNING" = "MATIN";
+"Time of day|EVENING" = "SOIR";
+"Time of day|LATER" = "PLUS TARD";
+"Time of day|CONTINUOUS" = "CONTINU";
+"Time of day|SAME" = "MÊME MOMENT";

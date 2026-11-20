@@ -1,0 +1,9 @@
+"Time of day|DAY" = "GIORNO";
+"Time of day|NIGHT" = "NOTTE";
+"Time of day|DAWN" = "ALBA";
+"Time of day|DUSK" = "CREPUSCOLO";
+"Time of day|MORNING" = "MATTINA";
+"Time of day|EVENING" = "SERA";
+"Time of day|LATER" = "PIÙ TARDI";
+"Time of day|CONTINUOUS" = "CONTINUO";
+"Time of day|SAME" = "STESSO MOMENTO";

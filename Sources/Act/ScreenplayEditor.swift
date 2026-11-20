@@ -109,17 +109,50 @@ struct ScreenplayEditor: NSViewRepresentable {
             let underlying: [(NSRange, [NSAttributedString.Key: Any])]
         }
         private var appliedHighlights: [AppliedHighlight] = []
+        let autocomplete = ScreenplayAutocompleteController()
+        private var applyingCompletion = false
         init(_ parent: ScreenplayEditor) {
             self.parent = parent
             self.lastSelectionRequest = parent.selectionRequest
+            super.init()
+            autocomplete.onApply = { [weak self] source, selection in
+                guard let self, let textView = self.textView else { return }
+                self.applyingCompletion = true
+                self.parent.document.replaceSource(source)
+                textView.string = source
+                textView.setSelectedRange(selection)
+                self.applyingCompletion = false
+                self.format()
+            }
         }
         func textDidChange(_ notification: Notification) {
-            guard !isFormatting, let textView else { return }
+            guard !isFormatting, !applyingCompletion, let textView else { return }
             parent.document.replaceSource(textView.string)
             format()
+            refreshAutocomplete()
         }
-        func textViewDidChangeSelection(_ notification: Notification) { format() }
+        func textViewDidChangeSelection(_ notification: Notification) {
+            format()
+            refreshAutocomplete()
+        }
         func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            if autocomplete.isVisible {
+                if commandSelector == #selector(NSTextView.insertNewline(_:)) || commandSelector == #selector(NSTextView.insertTab(_:)) {
+                    return autocomplete.accept()
+                }
+                if commandSelector == #selector(NSResponder.moveUp(_:)) {
+                    autocomplete.moveHighlight(-1)
+                    return true
+                }
+                if commandSelector == #selector(NSResponder.moveDown(_:)) {
+                    autocomplete.moveHighlight(1)
+                    return true
+                }
+                if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
+                    autocomplete.dismiss()
+                    return true
+                }
+            }
             if commandSelector == #selector(NSTextView.insertNewline(_:)), !textView.hasMarkedText() {
                 let selection = textView.selectedRange()
                 let insertion = FountainEditing.returnInsertion(in: textView.string, selection: selection)
@@ -135,6 +168,12 @@ struct ScreenplayEditor: NSViewRepresentable {
                 return true
             }
             return false
+        }
+        func refreshAutocomplete() {
+            guard let textView else { return }
+            let library = parent.characters.library.characters.map(\.name)
+            let screenplay = parent.characters.parsedScreenplay(for: textView.string)
+            autocomplete.refresh(textView: textView, source: textView.string, screenplay: screenplay, libraryNames: library)
         }
         func format() {
             guard !isFormatting, let textView, !textView.hasMarkedText(), let storage = textView.textStorage else { return }
