@@ -73,9 +73,7 @@ final class ProjectBoardDocument: NSDocument, ObservableObject {
             if card.kind == .draft { _ = try DocumentText(data: Data(contentsOf: url)) }
             if card.kind == .shots { _ = try ShotListStore.read(from: url) }
             change(L10n.string("Relink file", table: "Board")) { board in
-                guard let i = board.cards.firstIndex(where: { $0.id == card.id }) else { return }
-                board.cards[i].path = url.standardizedFileURL.path
-                if card.kind == .draft { board.cards[i].title = url.lastPathComponent }
+                board.relinkPath(url.standardizedFileURL.path, for: card.id)
             }
         } catch { failure = error.localizedDescription }
     }
@@ -118,26 +116,33 @@ final class ProjectBoardDocument: NSDocument, ObservableObject {
         }
     }
     func open(_ card: BoardCard) {
-        let owner = board.cards.first { $0.id == card.draftID }
-        let url = card.kind == .shots ? owner.flatMap { board.resolvedURL(for: $0) } : board.resolvedURL(for: card)
-        guard let url else { failure = L10n.string("Draft reference missing. Relink the original draft.", table: "Board"); return }
-        NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { [weak self] document, _, error in
+        guard let plan = board.openPlan(for: card) else {
+            failure = L10n.string("Draft reference missing. Relink the original draft.", table: "Board")
+            return
+        }
+        NSDocumentController.shared.openDocument(withContentsOf: plan.screenplayURL, display: true) { [weak self] document, _, error in
             if let error { self?.failure = error.localizedDescription; return }
-            guard let draft = document as? FountainDocument else { return }
-            if card.kind == .shots, let path = card.path {
+            guard let draft = document as? FountainDocument, let self else { return }
+            if let shotList = plan.shotListURL {
                 do {
-                    draft.shotWorkspace.prepare(source: draft.source, name: draft.fileURL?.deletingPathExtension().lastPathComponent, identity: url.path)
-                    try draft.shotWorkspace.openLinked(URL(fileURLWithPath: path))
+                    draft.shotWorkspace.prepare(source: draft.source, name: draft.fileURL?.deletingPathExtension().lastPathComponent, identity: plan.screenplayURL.path)
+                    try draft.shotWorkspace.openLinked(shotList)
+                } catch {
+                    self.failure = L10n.format("Cannot open linked shot list: %@ Save pending shot edits first.", error.localizedDescription, table: "Board")
+                    return
                 }
-                catch { self?.failure = L10n.format("Cannot open linked shot list: %@ Save pending shot edits first.", error.localizedDescription, table: "Board"); return }
             }
-            draft.requestedWorkspace = card.kind == .characters ? .characters : card.kind == .shots ? .shots : .screenplay
-            if card.kind == .scene, let anchor = card.anchor {
-                guard let scene = FountainParser.parse(draft.source).scenes.first(where: { $0.id == anchor.id }),
-                      SceneAnchor.digest(scene.text) == anchor.fingerprint else {
-                    self?.failure = L10n.string("Scene needs review. Opened draft without selecting a different scene.", table: "Board"); return
+            draft.requestedWorkspace = switch plan.workspace {
+            case .characters: .characters
+            case .shots: .shots
+            case .screenplay: .screenplay
+            }
+            if card.kind == .scene {
+                guard let sceneID = self.board.linkedSceneSelection(for: card, source: draft.source) else {
+                    self.failure = L10n.string("Scene needs review. Opened draft without selecting a different scene.", table: "Board")
+                    return
                 }
-                draft.requestedSceneID = scene.id
+                draft.requestedSceneID = sceneID
             }
         }
     }
