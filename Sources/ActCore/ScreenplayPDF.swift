@@ -14,6 +14,7 @@ public struct ScreenplayPDFLine: Sendable {
     /// Distance from the top edge of the page to the text baseline.
     public let baseline: CGFloat
     public let bold: Bool
+    public var underlineRanges: [NSRange] = []
 }
 
 public struct ScreenplayPDFPage: Sendable {
@@ -51,7 +52,7 @@ public enum ScreenplayPDF {
                 }
             }
             for line in page.lines {
-                draw(line.text, x: line.x, baseline: line.baseline, bold: line.bold, settings: settings, pageHeight: size.height, in: context)
+                draw(line.text, x: line.x, baseline: line.baseline, bold: line.bold, settings: settings, pageHeight: size.height, underlineRanges: line.underlineRanges, in: context)
             }
             context.endPDFPage()
         }
@@ -83,22 +84,26 @@ public enum ScreenplayPDF {
             let order = ["title", "credit", "author", "authors", "source"]
             let centred = order.flatMap { key in fields.filter { $0.key == key } }
             let footer = fields.filter { footerKeys.contains($0.key) }
-            func rows(_ field: FountainTitleField) -> [String] {
+            func rows(_ field: FountainTitleField) -> [NSAttributedString] {
                 field.value.components(separatedBy: "\n").flatMap {
-                    let text = visibleText($0)
-                    return text.isEmpty ? [""] : wrapped(text, width: bodyWidth, bold: field.key == "title", settings: settings)
+                    let text = titleText($0, bold: field.key == "title", settings: settings)
+                    return text.length == 0 ? [text] : wrapped(text, width: bodyWidth)
                 }
             }
             func append(_ field: FountainTitleField, centred: Bool) {
-                for text in rows(field) {
+                for row in rows(field) {
                     if y > bottom {
                         pages.append(ScreenplayPDFPage(lines: titleLines, isTitlePage: true))
                         titleLines = []
                         y = top
                     }
-                    let width = textWidth(text, bold: field.key == "title", settings: settings)
-                    titleLines.append(ScreenplayPDFLine(text: text, x: centred ? max(0, (size.width - width) / 2) : 108,
-                                                       baseline: y, bold: field.key == "title"))
+                    let width = CGFloat(CTLineGetTypographicBounds(CTLineCreateWithAttributedString(row), nil, nil, nil))
+                    var line = ScreenplayPDFLine(text: row.string, x: centred ? max(0, (size.width - width) / 2) : 108,
+                                                baseline: y, bold: field.key == "title")
+                    row.enumerateAttribute(.underlineStyle, in: NSRange(location: 0, length: row.length)) { value, range, _ in
+                        if value != nil { line.underlineRanges.append(range) }
+                    }
+                    titleLines.append(line)
                     y += lineHeight
                 }
                 y += lineHeight
@@ -288,17 +293,57 @@ public enum ScreenplayPDF {
     @MainActor
     private static func wrapped(_ text: String, width: CGFloat, bold: Bool, settings: ScreenplaySettings) -> [String] {
         let value = attributed(text, bold: bold, settings: settings)
+        return wrapped(value, width: width).map(\.string)
+    }
+
+    @MainActor
+    private static func wrapped(_ value: NSAttributedString, width: CGFloat) -> [NSAttributedString] {
         let typesetter = CTTypesetterCreateWithAttributedString(value)
-        let ns = text as NSString
+        let ns = value.string as NSString
         var offset = 0
-        var result: [String] = []
+        var result: [NSAttributedString] = []
         while offset < ns.length {
             var length = CTTypesetterSuggestLineBreak(typesetter, offset, Double(width))
             if length == 0 { length = ns.rangeOfComposedCharacterSequence(at: offset).length }
-            result.append(ns.substring(with: NSRange(location: offset, length: length)).trimmingCharacters(in: .whitespaces))
+            var start = offset
+            var end = offset + length
+            while start < end, (CharacterSet.whitespaces as NSCharacterSet).characterIsMember(ns.character(at: start)) { start += 1 }
+            while end > start, (CharacterSet.whitespaces as NSCharacterSet).characterIsMember(ns.character(at: end - 1)) { end -= 1 }
+            result.append(value.attributedSubstring(from: NSRange(location: start, length: end - start)))
             offset += length
         }
         return result
+    }
+
+    @MainActor
+    private static func titleText(_ text: String, bold: Bool, settings: ScreenplaySettings) -> NSAttributedString {
+        let value = NSMutableAttributedString(attributedString: attributed(text, bold: bold, settings: settings))
+        func removeMatches(_ pattern: String) {
+            let regex = try! NSRegularExpression(pattern: pattern)
+            for match in regex.matches(in: value.string, range: NSRange(location: 0, length: value.length)).reversed() {
+                value.deleteCharacters(in: match.range)
+            }
+        }
+        removeMatches(#"\[\[.*?\]\]"#)
+        removeMatches(#"\s+#[^#]+#\s*$"#)
+        let emphasis = try! NSRegularExpression(pattern: #"(?<!\\)(\*{1,3}|_)(?=\S)(.+?\S|\S)\1"#)
+        for _ in 0..<3 {
+            for match in emphasis.matches(in: value.string, range: NSRange(location: 0, length: value.length)).reversed() {
+                let marker = match.range(at: 1)
+                if (value.string as NSString).substring(with: marker) == "_" {
+                    value.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: match.range(at: 2))
+                }
+                value.deleteCharacters(in: NSRange(location: NSMaxRange(match.range) - marker.length, length: marker.length))
+                value.deleteCharacters(in: marker)
+            }
+        }
+        removeMatches(#"\\(?=[*_\\])"#)
+        let ns = value.string as NSString
+        var start = 0
+        var end = ns.length
+        while start < end, (CharacterSet.whitespaces as NSCharacterSet).characterIsMember(ns.character(at: start)) { start += 1 }
+        while end > start, (CharacterSet.whitespaces as NSCharacterSet).characterIsMember(ns.character(at: end - 1)) { end -= 1 }
+        return value.attributedSubstring(from: NSRange(location: start, length: end - start))
     }
 
     private static func visibleText(_ text: String) -> String {
@@ -313,9 +358,11 @@ public enum ScreenplayPDF {
     }
 
     @MainActor
-    private static func draw(_ text: String, x: CGFloat, baseline: CGFloat, bold: Bool, settings: ScreenplaySettings, pageHeight: CGFloat, in context: CGContext) {
+    private static func draw(_ text: String, x: CGFloat, baseline: CGFloat, bold: Bool, settings: ScreenplaySettings, pageHeight: CGFloat, underlineRanges: [NSRange] = [], in context: CGContext) {
         context.textMatrix = .identity
         context.textPosition = CGPoint(x: x, y: pageHeight - baseline)
-        CTLineDraw(CTLineCreateWithAttributedString(attributed(text, bold: bold, settings: settings)), context)
+        let value = NSMutableAttributedString(attributedString: attributed(text, bold: bold, settings: settings))
+        for range in underlineRanges { value.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: range) }
+        CTLineDraw(CTLineCreateWithAttributedString(value), context)
     }
 }

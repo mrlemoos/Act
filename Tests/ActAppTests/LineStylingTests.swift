@@ -6,6 +6,16 @@ import Testing
 
 @Suite(.serialized) @MainActor
 struct LineStylingTests {
+    @Test func titleSupportsUnderlineInEditor() throws {
+        let source = "Title: _Café_\n\nINT. ROOM - DAY\n"
+        let host = try TestEditorHost(source: source)
+        defer { host.close() }
+        let storage = try #require(host.textView.textStorage)
+        let range = (source as NSString).range(of: "Café")
+        #expect(storage.attribute(.underlineStyle, at: range.location, effectiveRange: nil) as? Int == NSUnderlineStyle.single.rawValue)
+        #expect(host.document.source == source)
+    }
+
     private static let probe = NSAttributedString.Key("LineStylingProbe")
 
     private func isBold(_ host: TestEditorHost, at location: Int) -> Bool {

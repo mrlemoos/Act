@@ -6,6 +6,42 @@ import Testing
 
 @MainActor
 struct PDFTests {
+    @Test func titleUnderlineSurvivesPDFRendering() throws {
+        func titleImage(_ title: String) throws -> Data {
+            let pdf = try #require(PDFDocument(data: ScreenplayPDF.data(source: "Title: \(title)")))
+            let page = try #require(pdf.page(at: 0))
+            return try #require(page.thumbnail(of: CGSize(width: 612, height: 792), for: .mediaBox).tiffRepresentation)
+        }
+        #expect(try titleImage("_Café_") != titleImage("Café"))
+    }
+
+    @Test func titleUnderlinePreservesRangesAcrossWrappingAndContinuationLines() throws {
+        let title = "Café " + String(repeating: "quiet streets ", count: 20) + "fin"
+        let source = "Title: Before _\(title)_ after\n    _Épilogue_\nAuthor: Writer\n\nINT. ROOM - DAY\n\nAction."
+        let pages = ScreenplayPDF.layout(source: source)
+        let lines = pages.filter(\.isTitlePage).flatMap(\.lines)
+        let underlined = lines.flatMap { line in
+            line.underlineRanges.map { (line.text as NSString).substring(with: $0) }
+        }
+        #expect(underlined.count > 2)
+        #expect(underlined.joined(separator: " ") == title + " Épilogue")
+        #expect(lines.first?.text.hasPrefix("Before Café") == true)
+        #expect(lines.contains { $0.text.hasSuffix("fin after") })
+        #expect(lines.first { $0.text == "Writer" }?.underlineRanges.isEmpty == true)
+        #expect(pages.filter { !$0.isTitlePage }.flatMap(\.lines).allSatisfy { $0.underlineRanges.isEmpty })
+        let pdf = try #require(PDFDocument(data: ScreenplayPDF.data(source: source)))
+        #expect(pdf.page(at: 0)?.string?.contains("Épilogue") == true)
+    }
+
+    @Test func titleUnderlineKeepsEscapedMarkersLiteralAndHandlesNestedEmphasis() throws {
+        let escaped = try #require(ScreenplayPDF.layout(source: #"Title: \_Café\_"#).first?.lines.first)
+        #expect(escaped.text == "_Café_")
+        #expect(escaped.underlineRanges.isEmpty)
+        let nested = try #require(ScreenplayPDF.layout(source: "Title: **_Café_**").first?.lines.first)
+        #expect(nested.text == "Café")
+        #expect(nested.underlineRanges == [NSRange(location: 0, length: 4)])
+    }
+
     @Test func exportsTitleAndBodyWithUnicode() throws {
         let source = "Title: Café\nAuthor: Léo\n\nINT. CAFÉ - NIGHT\n\nÉva waits.\n\nÉVA\nOlá, mundo.\n"
         let bytes = try ScreenplayPDF.data(source: source)
