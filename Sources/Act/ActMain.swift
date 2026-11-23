@@ -25,10 +25,12 @@ final class ActApplicationDelegate: NSObject, NSApplicationDelegate, NSMenuItemV
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        if documents.documents.isEmpty { documents.newDocument(nil) }
+        let background = ProcessInfo.processInfo.arguments.contains("--automation-background")
+        if documents.documents.isEmpty && !background { documents.newDocument(nil) }
         installMainMenu()
         DispatchQueue.main.async { self.installMainMenu() }
-        NSApp.activate(ignoringOtherApps: true)
+        AutomationService.shared.start()
+        if !background { NSApp.activate(ignoringOtherApps: true) }
     }
 
     func installMainMenu() {
@@ -42,11 +44,13 @@ final class ActApplicationDelegate: NSObject, NSApplicationDelegate, NSMenuItemV
         for case let document as FountainDocument in documents.documents {
             if !document.confirmShotClosure() { return .terminateCancel }
         }
+        AutomationService.shared.shutdown()
         return .terminateNow
     }
 
-    func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool { true }
+    func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool { !ProcessInfo.processInfo.arguments.contains("--automation-background") }
     func applicationOpenUntitledFile(_ sender: NSApplication) -> Bool {
+        guard !ProcessInfo.processInfo.arguments.contains("--automation-background") else { return false }
         documents.newDocument(nil)
         return true
     }
@@ -66,6 +70,8 @@ final class ActApplicationDelegate: NSObject, NSApplicationDelegate, NSMenuItemV
         }
         return documents.currentDocument as? FountainDocument
     }
+
+    @objc private func openAutomation(_ sender: Any?) { AutomationService.shared.showWindow() }
 
     @objc private func newProject(_ sender: Any?) {
         do {
@@ -91,6 +97,7 @@ final class ActApplicationDelegate: NSObject, NSApplicationDelegate, NSMenuItemV
     }
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(openAutomation(_:)) { return true }
         if menuItem.action == #selector(openSettings(_:)) { return true }
         if menuItem.action == #selector(revertCurrentDocument(_:)) { if let host = activeFileDocument as? FountainDocument, host.requestedWorkspace == .board { return host.projectBoard?.fileURL != nil }
             return activeFileDocument?.fileURL != nil }
@@ -103,6 +110,7 @@ final class ActApplicationDelegate: NSObject, NSApplicationDelegate, NSMenuItemV
         app.addItem(withTitle: L10n.string("About Act", table: "Menus"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         app.addItem(.separator())
         app.addItem(withTitle: L10n.string("Settings…", table: "Menus"), action: #selector(openSettings(_:)), keyEquivalent: ",").target = self
+        app.addItem(withTitle: automationText("Automation…"), action: #selector(openAutomation(_:)), keyEquivalent: "A").target = self
         app.addItem(.separator())
         app.addItem(withTitle: L10n.string("Hide Act", table: "Menus"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         app.addItem(withTitle: L10n.string("Quit Act", table: "Menus"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")

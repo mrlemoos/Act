@@ -11,5 +11,10 @@ Define business concepts, not frameworks, libraries or implementation types. One
 | Action paragraph | Contiguous Fountain action lines containing a marked name, bounded by blank lines or another element type | A physical introduction split across two lines | Dialogue and adjacent paragraphs are excluded |
 | Character reference sheet | Generated visual reference with front, profile, back and expressions | ORLEANS turnaround and expressions | An image asset, distinct from a written profile or inference model |
 | Physical evidence | Exact phrase supporting a locally extracted physical detail | calloused fingers | Status, props and unspecified appearance are not physical facts |
+| Managed project | Folder containing screenplays and their planning assets beneath `~/Documents/Act` | `First Light/Draft.fountain` | Separate from the visual `.actboard` organisation document |
+| Edit batch | Reviewed set of exact source changes applied together against one document revision | Replace an action and move another paragraph | One native undo step; planning metadata is separate |
+| AI review history | Persistent before/after records for automated screenplay edits | A removed paragraph and its former location | Survives relaunch outside Fountain; native undo need not survive |
+| Storyboard image | Versioned raster image linked to a shot-list entry | A wide frame of the courtyard | Separate from shot text and character reference sheets |
+| Image request | Prepared description, selected references and intended image target | A reviewed shot prompt with two character sheets | Preparation/export does not itself transmit or generate an image |
 
 Record ambiguity as unresolved. Agree meaning before updating contracts or acceptance checks. Use these terms consistently in code, specs, tickets and ADRs.

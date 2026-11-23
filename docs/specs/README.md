@@ -18,6 +18,8 @@ Startup checker flags metadata inconsistencies and lifecycle review candidates. 
 
 ## Active work
 
+- [AI editing and automation](ai-cli.md)
+
 - [Act screenwriting v1](screenwriting/spec.md)
 - [Character reference sheets](screenwriting/character-sheets.md)
 

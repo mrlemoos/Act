@@ -123,6 +123,7 @@ public struct CharacterReference: Codable, Identifiable, Equatable, Sendable {
     public var activeVersionID: UUID?
     public var needsReview: Bool { marks.contains(where: \.needsReview) }
     public var activeVersion: CharacterSheetVersion? { versions.first { $0.id == activeVersionID } }
+    public init(name: String, colourIndex: Int) { self.name = name; self.colourIndex = colourIndex }
 
     public var contradictions: [String] {
         let traits = marks.flatMap(\.traits)

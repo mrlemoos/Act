@@ -41,7 +41,13 @@ struct WorkspaceView: View {
                     Text(L10n.string("Characters", table: "Writing")).tag(WorkspaceSection.characters)
                 }.pickerStyle(.segmented).labelsHidden().frame(minWidth: 380, idealWidth: 470, maxWidth: 520)
                 Spacer()
+                if !document.aiReview.changes.isEmpty {
+                    Button { document.showAIReviewPopup() } label: {
+                        Label("\(document.aiReview.changes.filter { !$0.dismissed && !$0.reverted }.count)", systemImage: "text.badge.checkmark")
+                    }.accessibilityLabel(automationText("Review AI changes")).help(automationText("Review AI changes"))
+                }
                 Menu {
+                    Button(automationText("Automation…")) { AutomationService.shared.showWindow() }
                     Toggle(L10n.string("Scene outline", table: "Writing"), isOn: $showOutline)
                     if workspace == .screenplay {
                         Toggle(L10n.string("Fountain source", table: "Writing"), isOn: $sourceMode)
@@ -88,6 +94,11 @@ struct WorkspaceView: View {
         .onChange(of: document.requestedSceneID) { _, value in
             if let scene = screenplay.scenes.first(where: { $0.id == value }) {
                 workspace = .screenplay; selection = NSRange(location: scene.range.location, length: 0); selectionRequest = UUID()
+            }
+        }
+        .onChange(of: document.automationSelectionRequest) { _, _ in
+            if let range = document.automationSelection {
+                workspace = .screenplay; selection = range; selectionRequest = UUID()
             }
         }
         .onChange(of: workspace) { _, value in

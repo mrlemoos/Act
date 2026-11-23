@@ -4,9 +4,12 @@ cd "${0:A:h}/.."
 configuration="${1:-debug}"
 swift build -c "$configuration"
 app=".build/Act.app"
-mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Helpers" "$app/Contents/Resources"
 binary_directory="$(swift build -c "$configuration" --show-bin-path)"
 cp "$binary_directory/Act" "$app/Contents/MacOS/Act"
+zsh scripts/build-cli.sh
+cp .build/act "$app/Contents/Helpers/act"
+/usr/bin/codesign --force --sign - "$app/Contents/Helpers/act"
 cp Resources/Info.plist "$app/Contents/Info.plist"
 cp Resources/Act.icns "$app/Contents/Resources/Act.icns"
 for localisation in Resources/*.lproj; do

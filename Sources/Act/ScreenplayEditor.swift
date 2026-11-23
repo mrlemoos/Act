@@ -35,6 +35,7 @@ struct ScreenplayEditor: NSViewRepresentable {
         let text = ScreenplayTextView(frame: .zero)
         characters.prepare(screenplayURL: document.fileURL, source: document.source)
         text.screenplayDocument = document
+        document.screenplayEditorView = text
         text.isRichText = false
         text.allowsUndo = false
         text.isAutomaticQuoteSubstitutionEnabled = false
@@ -87,6 +88,7 @@ struct ScreenplayEditor: NSViewRepresentable {
         }
         if sourceChanged || coordinator.configurationChanged { coordinator.format() }
         else if coordinator.highlightedRevision != characters.revision { coordinator.refreshHighlights() }
+        text.needsDisplay = true
     }
 
     /// Styling is committed per line: on line breaks, when the caret leaves its line, and when the
@@ -216,12 +218,25 @@ struct ScreenplayEditor: NSViewRepresentable {
             var suffix = 0
             while suffix < limit - prefix, old.character(at: old.length - 1 - suffix) == new.character(at: new.length - 1 - suffix) { suffix += 1 }
             let ranges = textView.selectedRanges
+            let scrollOrigin = textView.enclosingScrollView?.contentView.bounds.origin
+            // NSTextStorage can expose a live NSString proxy. Capture lengths before mutation.
+            let oldLength = old.length, lengthDelta = new.length - old.length
             isApplyingSource = true
             storage.replaceCharacters(in: NSRange(location: prefix, length: old.length - prefix - suffix),
                                       with: new.substring(with: NSRange(location: prefix, length: new.length - prefix - suffix)))
             textView.selectedRanges = ranges.map { value in
                 let range = value.rangeValue
-                return NSValue(range: NSRange(location: min(range.location, new.length), length: min(range.length, max(0, new.length - range.location))))
+                func rebased(_ position: Int) -> Int {
+                    if position <= prefix { return position }
+                    if position >= oldLength - suffix { return position + lengthDelta }
+                    return min(position, new.length - suffix)
+                }
+                let start = max(0, min(rebased(range.location), new.length))
+                let end = max(start, min(rebased(NSMaxRange(range)), new.length))
+                return NSValue(range: NSRange(location: start, length: end - start))
+            }
+            if let scrollOrigin, let scroll = textView.enclosingScrollView {
+                scroll.contentView.scroll(to: scrollOrigin); scroll.reflectScrolledClipView(scroll.contentView)
             }
             isApplyingSource = false
         }
@@ -547,6 +562,64 @@ final class ScreenplayTextView: NSTextView {
     }
 
     weak var screenplayDocument: FountainDocument?
+    private var reviewButtons: [UUID: NSButton] = [:]
+    private(set) var reviewPopover: NSPopover?
+
+    override func accessibilityChildren() -> [Any]? {
+        (super.accessibilityChildren() ?? []) + reviewButtons.values.sorted { $0.frame.minY < $1.frame.minY }
+    }
+
+    override func layout() {
+        super.layout()
+        updateReviewButtons()
+    }
+
+    private func updateReviewButtons() {
+        guard let layoutManager, textContainer != nil else { return }
+        let changes = screenplayDocument?.aiReview.changes.filter { !$0.dismissed && !$0.conflicted && !$0.reverted } ?? []
+        let active = Set(changes.map(\.id))
+        for id in Array(reviewButtons.keys) where !active.contains(id) {
+            reviewButtons.removeValue(forKey: id)?.removeFromSuperview()
+        }
+        let length = (string as NSString).length
+        var markersPerLine: [CGFloat: Int] = [:]
+        for change in changes {
+            guard change.location >= 0, NSMaxRange(change.range) <= length else { continue }
+            let button = reviewButtons[change.id] ?? NSButton(title: "", target: self, action: #selector(reviewMarkerClicked(_:)))
+            button.identifier = NSUserInterfaceItemIdentifier(change.id.uuidString)
+            button.title = change.kind == "move" ? "↔" : change.after.isEmpty ? "−" : "+"
+            button.isBordered = false
+            button.font = .monospacedSystemFont(ofSize: 13, weight: .bold)
+            button.contentTintColor = change.kind == "move" ? .systemBlue : change.after.isEmpty ? .systemOrange : .systemGreen
+            button.setAccessibilityLabel(automationText("AI changes") + " " + button.title)
+            button.toolTip = automationText("AI changes")
+            var line = NSRect(x: 0, y: 0, width: 0, height: 20)
+            if length > 0 {
+                let glyph = layoutManager.glyphIndexForCharacter(at: min(change.location, length - 1))
+                line = layoutManager.lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil)
+            }
+            let offset = markersPerLine[line.minY, default: 0]
+            markersPerLine[line.minY] = offset + 1
+            button.frame = NSRect(x: max(0, textContainerOrigin.x + line.minX - 30 - CGFloat(offset * 26)), y: textContainerOrigin.y + line.minY - 3, width: 26, height: max(22, line.height + 6))
+            if button.superview == nil { addSubview(button); reviewButtons[change.id] = button }
+        }
+    }
+
+    @objc private func reviewMarkerClicked(_ sender: NSButton) {
+        guard let document = screenplayDocument,
+              let change = document.aiReview.changes.first(where: { $0.id.uuidString == sender.identifier?.rawValue }),
+              !change.dismissed, !change.conflicted, !change.reverted else { return }
+        reviewPopover?.close()
+        let popover = NSPopover()
+        popover.behavior = .transient
+        popover.contentViewController = NSHostingController(rootView: AIInlineReviewPopover(document: document, operationID: change.operationID) { [weak self] in
+            self?.reviewPopover?.close()
+            self?.needsDisplay = true
+        })
+        reviewPopover = popover
+        popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .maxX)
+    }
+
     private var keyObserver: NSObjectProtocol?
     override var undoManager: UndoManager? { screenplayDocument?.undoManager }
 
@@ -642,8 +715,27 @@ final class ScreenplayTextView: NSTextView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
+        NSGraphicsContext.saveGraphicsState()
         super.draw(dirtyRect)
+        NSGraphicsContext.restoreGraphicsState()
         guard let layoutManager, let textContainer else { return }
+        updateReviewButtons()
+        if let document = screenplayDocument {
+            for change in document.aiReview.changes where !change.dismissed && !change.conflicted && !change.reverted {
+                let length = (string as NSString).length
+                guard length > 0, change.location >= 0, NSMaxRange(change.range) <= length else { continue }
+                let range = change.range.length == 0 ? NSRange(location: min(change.location, length - 1), length: 1) : change.range
+                let glyphs = layoutManager.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+                let colour: NSColor = change.kind == "move" ? .systemBlue : change.after.isEmpty ? .systemOrange : .systemGreen
+                if !change.after.isEmpty {
+                    layoutManager.enumerateEnclosingRects(forGlyphRange: glyphs, withinSelectedGlyphRange: NSRange(location: NSNotFound, length: 0), in: textContainer) { rect, _ in
+                        let rect = rect.offsetBy(dx: self.textContainerOrigin.x, dy: self.textContainerOrigin.y)
+                        if rect.intersects(dirtyRect) { colour.withAlphaComponent(0.10).setFill(); NSBezierPath(roundedRect: rect, xRadius: 2, yRadius: 2).fill() }
+                    }
+                }
+
+            }
+        }
         let visible = layoutManager.glyphRange(forBoundingRect: dirtyRect.offsetBy(dx: -textContainerOrigin.x, dy: -textContainerOrigin.y), in: textContainer)
         for continuation in continuations(in: layoutManager.characterRange(forGlyphRange: visible, actualGlyphRange: nil)) {
             guard continuation.range.length > 0, NSMaxRange(continuation.range) <= (string as NSString).length else { continue }

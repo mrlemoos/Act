@@ -7,11 +7,13 @@ import UniformTypeIdentifiers
 final class ShotWorkspaceModel: ObservableObject {
     @Published var list = ShotListDocument(source: "") {
         didSet {
+            automationRevision = UUID().uuidString
             guard !restoring else { return }
             isDirty = true
             persistRecovery()
         }
     }
+    @Published private(set) var automationRevision = UUID().uuidString
     @Published var selectedSceneID = ""
     @Published var isDirty = false
     @Published var fileURL: URL?
@@ -26,8 +28,10 @@ final class ShotWorkspaceModel: ObservableObject {
     private var task: Task<Void, Never>?
     private var recoveryIdentity: String?
     private var screenplayFingerprint = ""
+    var automationRecoveryDirectory: URL?
     private var recoveryStore: ShotRecoveryStore {
-        ShotRecoveryStore(directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Act/ShotRecovery", isDirectory: true))
+        let isolated = ProcessInfo.processInfo.environment["ACT_AUTOMATION_DIRECTORY"].map { URL(fileURLWithPath: $0).appendingPathComponent("ShotRecovery") }
+        return ShotRecoveryStore(directory: automationRecoveryDirectory ?? isolated ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Act/ShotRecovery", isDirectory: true))
     }
     private var recoveryRecord: ShotRecoveryRecord {
         ShotRecoveryRecord(document: list, path: fileURL?.path, baseline: baseline, isDirty: isDirty, screenplayFingerprint: screenplayFingerprint, screenplayIdentity: recoveryIdentity ?? "")
@@ -210,6 +214,16 @@ final class ShotWorkspaceModel: ObservableObject {
 
     func cancel() { task?.cancel() }
 
+    func applyAutomationList(_ updated: ShotListDocument, to url: URL) throws {
+        guard !isGenerating, !isDownloading else { throw AutomationFailure("busy", "Shot workspace is busy.") }
+        let disk = FileManager.default.fileExists(atPath: url.path) ? try Data(contentsOf: url) : nil
+        guard disk == baseline else { throw DocumentError.externalChange }
+        let data = try ShotListStore.data(for: updated)
+        try data.write(to: url, options: .atomic)
+        list = updated; fileURL = url; baseline = data; isDirty = false
+        persistRecovery()
+    }
+
     private func write(to url: URL) throws {
         let data = try ShotListStore.data(for: list)
         try data.write(to: url, options: .atomic)
@@ -312,6 +326,7 @@ struct ShotWorkspace: View {
                         ForEach($model.list.shots) { $shot in
                             if shot.sceneID == scene?.id {
                                 ShotRow(shot: $shot, number: (visibleShots.firstIndex(where: { $0.id == shot.id }) ?? 0) + 1) { model.removeShot(shot.id) }
+                                StoryboardImageStrip(document: document, shotID: shot.id)
                                     .disabled(model.isGenerating)
                                 Divider().padding(.leading, 48)
                             }

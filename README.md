@@ -23,11 +23,11 @@ The sections below are the working guide: install, writing, shots, local models,
 
 ## Run
 
-Requires macOS 15 or later and a Swift 6 toolchain.
+Requires macOS 15 or later, a Swift 6 toolchain and Bun to build the bundled CLI. The built app and CLI require neither Bun nor Node.
 
 ```sh
-swift test
 scripts/build-app.sh
+swift test --no-parallel
 open .build/Act.app
 ```
 
@@ -54,6 +54,21 @@ Return inserts two line breaks between screenplay blocks. Character cues, dialog
 Open the right settings sidebar with Act > Settings, Command-comma or the toolbar menu. Live examples show each style change alongside the screenplay. Close the sidebar with its upper-right control. Choose an installed font and point size, one or two blank lines before scene headings, bold or regular scene headings, and automatic dialogue CONT'D. Preferences apply across windows and PDF export and survive app restarts. Defaults are Courier 12 pt, two blank lines, bold headings and continuations on. The editor uses a readable zoom relative to print size.
 
 Automatic CONT'D appears when the same speaker resumes after action within a scene. PDF page breaks also add MORE and repeated continued cues. Turning the option off leaves explicit cues already written in the source untouched. These are display/export changes; Fountain source and whitespace stay unchanged.
+
+## AI editing and automation
+
+Open **Act > Automation** to submit structured commands from a computer-use application, or use the bundled standalone `act` CLI. Both edit the same live documents, including unsaved writing. New AI edits show inline highlights, deletion markers and linked move feedback. **Review AI changes** opens a popup with before/after cards and Accept/Reject controls. Accept keeps the applied edits; Reject safely reverts them. Review does not open a side panel or narrow the screenplay.
+
+Automation projects live under `~/Documents/Act/{project name}`. Import copies screenplays and linked assets while preserving originals. Commands preview precise text edits, check document revisions and apply each batch as one native undo step. Source saving, shot planning and character metadata remain distinct operations.
+
+Storyboard requests can be exported for image tools such as ChatGPT Work and imported into shot entries. Configured terminal providers require per-request approval in a popup showing the exact description and references. Accept starts generation; Reject cancels the pending request. Image versions and persistent edit review stay outside Fountain.
+
+```sh
+.build/Act.app/Contents/Helpers/act install
+~/.local/bin/act schema
+```
+
+The installer refuses to replace another command and does not change PATH. [CLI and computer-use guide](CLI/README.md) covers exact requests, generation jobs, persistence and recovery.
 
 ## Plan shots
 

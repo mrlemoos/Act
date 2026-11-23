@@ -1,0 +1,15 @@
+{
+  "name": "act-cli",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "check:contract": "bun contract.ts --check",
+    "build": "bun build --compile --minify --outfile ../.build/act src/main.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.5",
+    "typescript": "^7.0.2"
+  }
+}

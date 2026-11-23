@@ -1,0 +1,1005 @@
+{
+  "version": 1,
+  "protocol": "One UTF-8 JSON request and response, each newline terminated, per Unix socket connection. Maximum request: 4 MiB.",
+  "requestSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "version",
+      "requestID",
+      "operation",
+      "parameters"
+    ],
+    "properties": {
+      "version": {
+        "const": 1
+      },
+      "requestID": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "operation": {
+        "enum": [
+          "status",
+          "schema",
+          "projects.list",
+          "projects.create",
+          "projects.import",
+          "documents.list",
+          "documents.open",
+          "documents.import",
+          "documents.create",
+          "documents.inspect",
+          "documents.save",
+          "source.read",
+          "edits.preview",
+          "edits.apply",
+          "edits.discard",
+          "reviews.list",
+          "reviews.archives",
+          "reviews.navigate",
+          "reviews.dismiss",
+          "reviews.clear",
+          "reviews.revert",
+          "shots.list",
+          "shots.add",
+          "shots.update",
+          "shots.remove",
+          "shots.generate",
+          "shots.apply",
+          "characters.list",
+          "characters.create",
+          "characters.mark",
+          "characters.update",
+          "characters.extract",
+          "images.prepare",
+          "images.export",
+          "images.submit",
+          "images.import",
+          "images.attach",
+          "images.list",
+          "images.agents",
+          "images.select",
+          "jobs.list",
+          "jobs.status",
+          "jobs.cancel",
+          "jobs.retry"
+        ]
+      },
+      "documentID": {
+        "type": "string",
+        "minLength": 1
+      },
+      "expectedRevision": {
+        "type": "string",
+        "minLength": 1
+      },
+      "parameters": {
+        "type": "object"
+      }
+    }
+  },
+  "responseSchema": {
+    "type": "object",
+    "required": [
+      "version",
+      "requestID",
+      "operation",
+      "ok"
+    ],
+    "properties": {
+      "version": {
+        "const": 1
+      },
+      "requestID": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "operation": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "ok": {
+        "type": "boolean"
+      },
+      "result": {},
+      "error": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "retryable"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  },
+  "operations": {
+    "status": {
+      "summary": "Inspect server health and managed project root.",
+      "mutation": false,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      }
+    },
+    "schema": {
+      "summary": "Discover this versioned contract without opening Act.",
+      "mutation": false,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      }
+    },
+    "projects.list": {
+      "summary": "List managed projects.",
+      "mutation": false,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      }
+    },
+    "projects.create": {
+      "summary": "Create a project; refuse name collisions.",
+      "mutation": true,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "projects.import": {
+      "summary": "Copy a Fountain file and linked sidecars into a new project, preserving originals.",
+      "mutation": true,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "path"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "documents.list": {
+      "summary": "List live document IDs, source/planning revisions and persistence status.",
+      "mutation": false,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      }
+    },
+    "documents.open": {
+      "summary": "Open a managed Fountain file without activation.",
+      "mutation": true,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "documents.import": {
+      "summary": "Copy a screenplay and linked sidecars into an existing project, then open the copy. Refuse collisions and preserve originals.",
+      "mutation": true,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "project",
+          "path"
+        ],
+        "properties": {
+          "project": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "documents.create": {
+      "summary": "Create a Fountain file in an existing project; refuse overwrite.",
+      "mutation": true,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "documents.inspect": {
+      "summary": "Inspect one live document and prepare linked metadata.",
+      "mutation": false,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      }
+    },
+    "documents.save": {
+      "summary": "Save source through native conflict checks; optional path first-saves an untitled document to a new managed .fountain path.",
+      "mutation": true,
+      "revision": "source",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "source.read": {
+      "summary": "Read unsaved source and scene IDs; $document explicitly addresses the whole source.",
+      "mutation": false,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "sceneID": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "edits.preview": {
+      "summary": "Resolve an atomic batch against one revision; no source mutation.",
+      "mutation": true,
+      "revision": "source",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "edits"
+        ],
+        "properties": {
+          "edits": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 500,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "sceneID"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "insert",
+                    "replace",
+                    "remove",
+                    "move"
+                  ]
+                },
+                "sceneID": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "match": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "side": {
+                  "enum": [
+                    "before",
+                    "after"
+                  ]
+                },
+                "destinationSceneID": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "destinationAnchor": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "destinationSide": {
+                  "enum": [
+                    "before",
+                    "after"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "edits.apply": {
+      "summary": "Apply a reviewed preview once, as one native undo step.",
+      "mutation": true,
+      "revision": "source",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "previewID"
+        ],
+        "properties": {
+          "previewID": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "edits.discard": {
+      "summary": "Discard an unused preview without altering source or review history.",
+      "mutation": true,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "previewID"
+        ],
+        "properties": {
+          "previewID": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "reviews.list": {
+      "summary": "Read persistent AI changes, conflict and dismissal state.",
+      "mutation": false,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      }
+    },
+    "reviews.archives": {
+      "summary": "Inspect retained unsaved-document review archives without restoring or overwriting source.",
+      "mutation": false,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      }
+    },
+    "reviews.navigate": {
+      "summary": "Explicitly navigate to a change; only this action moves the selection.",
+      "mutation": true,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "changeID"
+        ],
+        "properties": {
+          "changeID": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "reviews.dismiss": {
+      "summary": "Dismiss batch/all highlights without erasing history.",
+      "mutation": true,
+      "revision": "source",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "batchID": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "reviews.clear": {
+      "summary": "Explicitly clear review history; requires confirm:true.",
+      "mutation": true,
+      "revision": "source",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "confirm"
+        ],
+        "properties": {
+          "confirm": {
+            "const": true
+          }
+        }
+      }
+    },
+    "reviews.revert": {
+      "summary": "Safely revert a change/operation/batch; refuse overlap with later writing.",
+      "mutation": true,
+      "revision": "source",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "changeID"
+        ],
+        "properties": {
+          "changeID": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "shots.list": {
+      "summary": "Read shot entries and their current shotRevision.",
+      "mutation": false,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      }
+    },
+    "shots.add": {
+      "summary": "Add a shot anchored to a current scene.",
+      "mutation": true,
+      "revision": "shots",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sceneID"
+        ],
+        "properties": {
+          "sceneID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "framing": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "cameraMovement": {
+            "type": "string"
+          },
+          "rationale": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "shots.update": {
+      "summary": "Update explicitly supplied shot fields.",
+      "mutation": true,
+      "revision": "shots",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "shotID"
+        ],
+        "properties": {
+          "shotID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "framing": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "cameraMovement": {
+            "type": "string"
+          },
+          "rationale": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "shots.remove": {
+      "summary": "Remove one shot; retain image history.",
+      "mutation": true,
+      "revision": "shots",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "shotID"
+        ],
+        "properties": {
+          "shotID": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "shots.generate": {
+      "summary": "Start offline shot generation; retain existing shots until explicit apply.",
+      "mutation": true,
+      "revision": "shots",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sceneID"
+        ],
+        "properties": {
+          "sceneID": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "shots.apply": {
+      "summary": "Explicitly apply a ready generation result to its unchanged scene.",
+      "mutation": true,
+      "revision": "shots",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jobID"
+        ],
+        "properties": {
+          "jobID": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "characters.list": {
+      "summary": "Read characters, marks, physical evidence and image versions.",
+      "mutation": false,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      }
+    },
+    "characters.create": {
+      "summary": "Create a character without discovering or marking occurrences.",
+      "mutation": true,
+      "revision": "characters",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "characters.mark": {
+      "summary": "Mark one exact action-name occurrence; optional characterID links an existing character.",
+      "mutation": true,
+      "revision": "characters",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sceneID",
+          "match"
+        ],
+        "properties": {
+          "sceneID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "match": {
+            "type": "string",
+            "minLength": 1
+          },
+          "characterID": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "characters.update": {
+      "summary": "Update a character name and/or authored image prompt.",
+      "mutation": true,
+      "revision": "characters",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "characterID"
+        ],
+        "properties": {
+          "characterID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prompt": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "characters.extract": {
+      "summary": "Start local MLX physical extraction; preserve details on stale source/failure.",
+      "mutation": true,
+      "revision": "characters",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "characterID"
+        ],
+        "properties": {
+          "characterID": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "images.prepare": {
+      "summary": "Prepare the exact outgoing prompt and selected reference versions, without sending it.",
+      "mutation": true,
+      "revision": "source",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "targetKind",
+          "targetID",
+          "prompt"
+        ],
+        "properties": {
+          "targetKind": {
+            "enum": [
+              "shot",
+              "character"
+            ]
+          },
+          "targetID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "references": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "characterID",
+                "versionID"
+              ],
+              "properties": {
+                "characterID": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "versionID": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "images.export": {
+      "summary": "Export the prepared payload and reference paths for an external image tool.",
+      "mutation": false,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jobID"
+        ],
+        "properties": {
+          "jobID": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "images.submit": {
+      "summary": "Queue an exact payload for native user approval; never approve it through the wire API.",
+      "mutation": true,
+      "revision": "source",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jobID",
+          "agent"
+        ],
+        "properties": {
+          "jobID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "agent": {
+            "enum": [
+              "codex",
+              "claude",
+              "grok",
+              "cursor"
+            ]
+          }
+        }
+      }
+    },
+    "images.import": {
+      "summary": "Validate/copy an external raster result; stale results are retained for review.",
+      "mutation": true,
+      "revision": "source",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jobID",
+          "path"
+        ],
+        "properties": {
+          "jobID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "images.attach": {
+      "summary": "Attach a retained result; stale inputs require explicit acknowledgement.",
+      "mutation": true,
+      "revision": "source",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jobID"
+        ],
+        "properties": {
+          "jobID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "acknowledgeStale": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "images.list": {
+      "summary": "Read storyboard version history and active versions.",
+      "mutation": false,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      }
+    },
+    "images.agents": {
+      "summary": "Inspect configured agent generation/reference-edit capabilities without invoking a provider.",
+      "mutation": false,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      }
+    },
+    "images.select": {
+      "summary": "Select an existing storyboard or character image version.",
+      "mutation": true,
+      "revision": "source",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "versionID"
+        ],
+        "properties": {
+          "versionID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "targetKind": {
+            "enum": [
+              "shot",
+              "character"
+            ]
+          },
+          "targetID": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "jobs.list": {
+      "summary": "List durable generation jobs.",
+      "mutation": false,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      }
+    },
+    "jobs.status": {
+      "summary": "Inspect job status and retained result paths.",
+      "mutation": false,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jobID"
+        ],
+        "properties": {
+          "jobID": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "jobs.cancel": {
+      "summary": "Cancel a job without promising provider billing cancellation.",
+      "mutation": true,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jobID"
+        ],
+        "properties": {
+          "jobID": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "jobs.retry": {
+      "summary": "Prepare a new image attempt; paid requests require fresh approval. Local jobs use their original generate/extract operation.",
+      "mutation": true,
+      "revision": "none",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jobID"
+        ],
+        "properties": {
+          "jobID": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

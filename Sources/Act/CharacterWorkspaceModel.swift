@@ -131,6 +131,20 @@ final class CharacterWorkspaceModel: ObservableObject {
         library.characters[index].prompt = value
     }
 
+    func applyAutomationLibrary(_ updated: CharacterLibrary) throws {
+        guard !isBusy, !loadFailed else { throw AutomationFailure("busy", "Character workspace is busy or requires recovery.") }
+        guard let directory else { throw AutomationFailure("save_required", "Save the screenplay before changing its character library.") }
+        let file = directory.appendingPathComponent("characters.json")
+        let disk = FileManager.default.fileExists(atPath: file.path) ? try Data(contentsOf: file) : nil
+        guard disk == baseline else { throw CharacterSheetError.externalChange }
+        let data = try CharacterLibraryStore.data(updated)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try data.write(to: file, options: .atomic)
+        library = updated
+        pendingSave?.cancel(); pendingSave = nil
+        baseline = data; isDirty = false
+    }
+
     func useExtractedDetails(id: UUID) {
         guard let character = library.characters.first(where: { $0.id == id }) else { return }
         if !character.prompt.isEmpty {

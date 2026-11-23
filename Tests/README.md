@@ -1,14 +1,17 @@
 # Regression tests
 
-Run the complete deterministic suite on macOS with a Swift 6 toolchain and an available WindowServer session:
+Run the complete deterministic suite on macOS with a Swift 6 toolchain, Bun and an available WindowServer session. Build the standalone client first for the native IPC test:
 
 ```sh
-swift test
+zsh scripts/build-cli.sh
+swift test --no-parallel
 ```
 
 `ActCoreTests` covers parsing, storage, formatting and the local runtime adapter. `ActAppTests` imports the actual app module and hosts native views in hidden windows. It sends no system input, opens no visible windows and does not use the running Act app. Tests own their temporary files and isolated preference suites.
 
 ## Coverage
+
+Automation adds native document/service regressions plus a separate TypeScript suite. Run `bun install --frozen-lockfile` and `bun run typecheck` from `CLI`, build the CLI with `zsh scripts/build-cli.sh`, and run `bun test CLI/src`. The complete `swift test --no-parallel` run includes native automation, editor/undo, storage and localisation checks. `bun CLI/integration.ts` separately exercises the signed app and standalone CLI through background launch, save, relaunch, history and temporary command installation. All automation projects/endpoints used by these checks are fixtures; provider approval uses a local executable fixture and makes no paid request. [Current evidence](../docs/specs/ai-cli/validation.md).
 
 Current suite: 93 core tests and 32 native app tests. The character-sheet validation run passed 123 of 125, with actual MLX extraction enabled and the two older GGUF inference checks skipped. The default command skips all three real-model checks. Native preview rendering runs only when its output directory is configured. [Character-sheet evidence](../docs/specs/screenwriting/character-sheets-validation.md).
 
