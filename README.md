@@ -21,6 +21,16 @@ The sections below are the working guide: install, writing, shots, local models,
 
 ---
 
+## Download
+
+Download an Apple Silicon ZIP from [GitHub Releases](https://github.com/mrlemoos/Act/releases). Each successful push to `main` produces a separate release targeting that commit. Requires macOS 15 or later on an Apple Silicon Mac. Intel Macs are not supported by these downloads.
+
+Extract `Act.app` and copy it to Applications. These builds are ad-hoc signed, not Developer ID signed or notarised. Gatekeeper may block opening the app. If you trust the download, review the warning and use System Settings > Privacy & Security > Open Anyway where macOS offers it. Do not disable Gatekeeper.
+
+The app and bundled CLI run without Swift, Bun or Node. Local inference requires a separate runtime and model, described below. Releases include SHA-256 checksums for the ZIP.
+
+Release automation needs no manually configured secrets. Rerun a failed Actions run to resume an unpublished draft. Published releases retain their existing downloads on rerun. Every push has its own release identity and does not cancel earlier pushes. Automation does not change the default latest release, so publication order cannot make an older commit replace a newer download there. Choose a release by its recorded commit.
+
 ## Run
 
 Requires macOS 15 or later, a Swift 6 toolchain and Bun to build the bundled CLI. The built app and CLI require neither Bun nor Node.

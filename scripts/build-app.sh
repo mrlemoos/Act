@@ -4,6 +4,8 @@ cd "${0:A:h}/.."
 configuration="${1:-debug}"
 swift build -c "$configuration"
 app=".build/Act.app"
+# Rebuild the generated bundle so removed resources cannot enter a download.
+rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Helpers" "$app/Contents/Resources"
 binary_directory="$(swift build -c "$configuration" --show-bin-path)"
 cp "$binary_directory/Act" "$app/Contents/MacOS/Act"
