@@ -8,6 +8,7 @@ enum WorkspaceSection: String { case screenplay, shots, characters, board }
 struct WorkspaceView: View {
     @ObservedObject var document: FountainDocument
     @State private var sourceMode = false
+    @StateObject private var zoom = ScreenplayZoom()
     @State private var workspace: WorkspaceSection = .screenplay
     @ObservedObject private var preferences: WritingPreferences
     @State private var selectedOutlineEntry: String?
@@ -165,11 +166,10 @@ struct WorkspaceView: View {
     private var screenplayEditor: some View {
         ZStack(alignment: .top) {
             Color(nsColor: .textBackgroundColor)
-            ScreenplayEditor(document: document, sourceMode: sourceMode, selection: selection, selectionRequest: selectionRequest, settings: preferences.settings)
-            if document.source.isEmpty {
-                Text("INT.").font(.custom(preferences.settings.fontName, size: preferences.settings.fontSize * 4 / 3)).foregroundStyle(.quaternary)
-                    .frame(maxWidth: 624, alignment: .leading).padding(.top, 76).padding(.horizontal, 56).allowsHitTesting(false)
-            }
+            ScreenplayEditor(document: document, sourceMode: sourceMode, selection: selection, selectionRequest: selectionRequest, settings: preferences.settings, zoom: zoom)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            ScreenplayZoomControl(zoom: zoom).padding(.trailing, 22).padding(.bottom, 16)
         }
     }
 

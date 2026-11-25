@@ -38,6 +38,7 @@ Current suite: 93 core tests and 32 native app tests. The character-sheet valida
 | Source changes during extraction preserve previous details and edited prompts | CharacterWorkspaceTests |
 | Per-line styling commits on Return, line change and focus loss; only changed lines restyle ([ADR 0001](../docs/adr/0001-line-scoped-editor-styling.md)) | LineStylingTests |
 | Feature-length typing, Return, caret and workspace timing budgets | EditorPerformanceTests |
+| Screenplay zoom events, bounds, anchoring, preserved layout/source/selection/undo, scaled hit testing and session state | ScreenplayZoomTests |
 
 The tests make assertions against saved bytes, native document state, attributed text and glyph bounds. Live example tests compare renders before and after each style change within the same run, using the actual observed view. They use no stored snapshot goldens or implementation-source comparisons.
 

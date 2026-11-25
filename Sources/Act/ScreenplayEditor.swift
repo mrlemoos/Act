@@ -5,15 +5,17 @@ import SwiftUI
 struct ScreenplayEditor: NSViewRepresentable {
     @ObservedObject var document: FountainDocument
     @ObservedObject private var characters: CharacterWorkspaceModel
+    @ObservedObject var zoom: ScreenplayZoom
     let sourceMode: Bool
     let selection: NSRange
     let selectionRequest: UUID
     var settings: ScreenplaySettings = .standard
 
-    init(document: FountainDocument, sourceMode: Bool, selection: NSRange, selectionRequest: UUID, settings: ScreenplaySettings = .standard) {
+    init(document: FountainDocument, sourceMode: Bool, selection: NSRange, selectionRequest: UUID, settings: ScreenplaySettings = .standard, zoom: ScreenplayZoom = ScreenplayZoom()) {
         self.document = document; self.sourceMode = sourceMode; self.selection = selection
         self.selectionRequest = selectionRequest; self.settings = settings
         characters = document.characterWorkspace
+        self.zoom = zoom
     }
 
     private var resolvedFont: NSFont {
@@ -29,6 +31,10 @@ struct ScreenplayEditor: NSViewRepresentable {
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = ScreenplayScrollView()
         scroll.hasVerticalScroller = true
+        scroll.scrollerStyle = .overlay
+        scroll.allowsMagnification = true
+        scroll.minMagnification = ScreenplayZoom.minimum
+        scroll.maxMagnification = ScreenplayZoom.maximum
         scroll.autohidesScrollers = true
         scroll.borderType = .noBorder
         scroll.backgroundColor = .textBackgroundColor
@@ -64,6 +70,8 @@ struct ScreenplayEditor: NSViewRepresentable {
         context.coordinator.textView = text
         scroll.onColumnWidthChange = { [weak coordinator = context.coordinator] in coordinator?.format() }
         context.coordinator.format()
+        scroll.onZoomChange = { [weak zoom] value in zoom?.set(value) }
+        scroll.setZoom(zoom.scale)
         return scroll
     }
 
@@ -73,6 +81,7 @@ struct ScreenplayEditor: NSViewRepresentable {
         coordinator.isUpdatingView = true
         defer { coordinator.isUpdatingView = false }
         guard let text = coordinator.textView else { return }
+        (scroll as? ScreenplayScrollView)?.setZoom(zoom.scale)
         var sourceChanged = false
         if !text.string.isLiterallyEqual(to: document.source) {
             coordinator.applyExternalSource(document.source)
@@ -521,13 +530,32 @@ struct ScreenplayEditor: NSViewRepresentable {
 }
 
 @MainActor
-private final class ScreenplayScrollView: NSScrollView {
+final class ScreenplayScrollView: NSScrollView {
     var onColumnWidthChange: (() -> Void)?
+    var onZoomChange: ((CGFloat) -> Void)?
+
+    func setZoom(_ scale: CGFloat, around point: NSPoint? = nil) {
+        guard scale.isFinite else { return }
+        let bounded = min(maxMagnification, max(minMagnification, scale))
+        guard abs(magnification - bounded) > 0.000001 else { return }
+        let anchor = point ?? NSPoint(x: contentView.bounds.midX, y: contentView.bounds.midY)
+        setMagnification(bounded, centeredAt: anchor)
+        hasHorizontalScroller = bounded > 1
+        onZoomChange?(magnification)
+    }
+
+    override func magnify(with event: NSEvent) {
+        guard event.phase != .cancelled, event.magnification.isFinite else { return }
+        let point = contentView.convert(event.locationInWindow, from: nil)
+        setZoom(magnification * max(0.01, 1 + event.magnification), around: point)
+    }
 
     override func layout() {
         super.layout()
         guard let text = documentView as? NSTextView else { return }
-        let available = contentSize.width
+        // The clip view's bounds shrink during magnification. Its frame remains the
+        // unscaled viewport, so zoom never becomes a screenplay column-width change.
+        let available = contentView.frame.width
         let column = min(624, max(220, available - 112))
         let inset = max(32, (available - column) / 2)
         let widthChanged = text.textContainer?.containerSize.width != column
@@ -535,8 +563,8 @@ private final class ScreenplayScrollView: NSScrollView {
             text.textContainer?.containerSize = NSSize(width: column, height: CGFloat.greatestFiniteMagnitude)
         }
         text.textContainerInset = NSSize(width: inset, height: 76)
-        text.minSize = NSSize(width: available, height: contentSize.height)
-        text.setFrameSize(NSSize(width: available, height: max(text.frame.height, contentSize.height)))
+        text.minSize = NSSize(width: available, height: contentView.bounds.height)
+        text.setFrameSize(NSSize(width: available, height: max(text.frame.height, contentView.bounds.height)))
         if widthChanged { onColumnWidthChange?() }
     }
 }
@@ -555,6 +583,9 @@ final class ScreenplayContinuationLabel: NSObject {
 
 @MainActor
 final class ScreenplayTextView: NSTextView {
+    override func magnify(with event: NSEvent) {
+        enclosingScrollView?.magnify(with: event)
+    }
     struct Continuation {
         var range: NSRange
         var text: String
@@ -718,6 +749,12 @@ final class ScreenplayTextView: NSTextView {
         NSGraphicsContext.saveGraphicsState()
         super.draw(dirtyRect)
         NSGraphicsContext.restoreGraphicsState()
+        if string.isEmpty {
+            ("INT." as NSString).draw(at: textContainerOrigin, withAttributes: [
+                .font: font ?? NSFont.monospacedSystemFont(ofSize: 16, weight: .regular),
+                .foregroundColor: NSColor.quaternaryLabelColor
+            ])
+        }
         guard let layoutManager, let textContainer else { return }
         updateReviewButtons()
         if let document = screenplayDocument {

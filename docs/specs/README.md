@@ -18,6 +18,8 @@ Startup checker flags metadata inconsistencies and lifecycle review candidates. 
 
 ## Active work
 
+- [Screenplay pinch zoom](screenplay-zoom.md), implemented with physical trackpad validation remaining.
+
 - [AI editing and automation](ai-cli.md)
 
 - [Act screenwriting v1](screenwriting/spec.md)

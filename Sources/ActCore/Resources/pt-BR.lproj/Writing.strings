@@ -75,3 +75,7 @@
 "Save a UTF-8 copy in the original application, then open that copy." = "Salve uma cópia em UTF-8 no aplicativo original e abra essa cópia.";
 "Use Save As to keep your version separately, or reload the file to use the external version." = "Use Salvar como para manter sua versão separada ou recarregue o arquivo para usar a versão externa.";
 "Act could not create the screenplay PDF." = "O Act não conseguiu criar o PDF do roteiro.";
+"Screenplay zoom" = "Zoom do roteiro";
+"Zoom out" = "Diminuir zoom";
+"Zoom in" = "Aumentar zoom";
+"Reset to 100%" = "Redefinir para 100%";

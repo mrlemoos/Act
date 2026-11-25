@@ -12,13 +12,15 @@ final class TestEditorHost {
     let window: NSWindow
     let textView: NSTextView
     let coordinator: ScreenplayEditor.Coordinator
+    let zoom: ScreenplayZoom
 
-    init(source: String, settings: ScreenplaySettings = .standard, sourceMode: Bool = false, width: CGFloat = 1000, height: CGFloat = 700) throws {
+    init(source: String, settings: ScreenplaySettings = .standard, sourceMode: Bool = false, width: CGFloat = 1000, height: CGFloat = 700, zoom: ScreenplayZoom = ScreenplayZoom()) throws {
+        self.zoom = zoom
         NSApplication.shared.setActivationPolicy(.prohibited)
         document = FountainDocument()
         try document.read(from: Data(source.utf8), ofType: "dev.act.fountain")
         document.undoManager?.groupsByEvent = false
-        view = NSHostingView(rootView: ScreenplayEditor(document: document, sourceMode: sourceMode, selection: NSRange(location: 0, length: 0), selectionRequest: UUID(), settings: settings))
+        view = NSHostingView(rootView: ScreenplayEditor(document: document, sourceMode: sourceMode, selection: NSRange(location: 0, length: 0), selectionRequest: UUID(), settings: settings, zoom: zoom))
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: height), styleMask: [.borderless], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
         window.contentView = view

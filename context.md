@@ -20,6 +20,8 @@ Act is a macOS-only Swift app for editing UTF-8 Fountain and planning shots with
 
 Active specification: [Act screenwriting v1](docs/specs/screenwriting/spec.md). Formatted editing restyles per line, not per keystroke: [ADR 0001](docs/adr/0001-line-scoped-editor-styling.md). Validation: `swift test`, `scripts/build-app.sh`, and `node .galicia/check.ts`. See [README](README.md) for native checks and model setup.
 
+[Screenplay pinch zoom](docs/specs/screenplay-zoom.md) adds window-session magnification and bottom-right controls without changing document typography or PDF output. Native regressions and visible controls pass; physical trackpad validation remains open.
+
 [Character reference sheets](docs/specs/screenwriting/character-sheets.md) adds manually marked action names, local MLX physical extraction and explicitly approved image-agent requests. Libraries live beside the screenplay; image generation never changes Fountain source.
 
 [Project board](docs/specs/project-board.md) defines the implemented visual project organisation follow-up; native gesture/relaunch verification remains open.
