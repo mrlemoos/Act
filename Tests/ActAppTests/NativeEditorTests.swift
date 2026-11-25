@@ -6,6 +6,39 @@ import Testing
 
 @Suite(.serialized) @MainActor
 struct NativeEditorTests {
+    @Test func typingWithoutCallerOwnedUndoGroupUpdatesSource() throws {
+        let host = try TestEditorHost(source: "She waits.")
+        defer { host.close() }
+        host.textView.setSelectedRange(NSRange(location: 10, length: 0))
+        host.textView.insertText("!", replacementRange: NSRange(location: NSNotFound, length: 0))
+        TestEditorHost.pump()
+        #expect(host.document.source == "She waits.!")
+        #expect(host.document.undoManager?.groupingLevel == 0)
+        host.undo()
+        #expect(host.document.source == "She waits.")
+        host.redo()
+        #expect(host.document.source == "She waits.!")
+    }
+
+    @Test func nativeDeletionAndReturnCloseTheirUndoGroups() throws {
+        let host = try TestEditorHost(source: "She waits.")
+        defer { host.close() }
+        host.textView.setSelectedRange(NSRange(location: 10, length: 0))
+        host.textView.deleteBackward(nil)
+        TestEditorHost.pump()
+        #expect(host.document.source == "She waits")
+        #expect(host.document.undoManager?.groupingLevel == 0)
+        host.undo()
+        #expect(host.document.source == "She waits.")
+        host.textView.setSelectedRange(NSRange(location: 10, length: 0))
+        host.textView.insertNewline(nil)
+        TestEditorHost.pump()
+        #expect(host.document.source == "She waits.\n")
+        #expect(host.document.undoManager?.groupingLevel == 0)
+        host.undo()
+        #expect(host.document.source == "She waits.")
+    }
+
     @Test func returnInsertsContextualBreaksAndIsOneUndoStep() throws {
         for (source, ending) in [
             ("She waits.", "\n\n"), ("INT. ROOM - DAY", "\n\n"),

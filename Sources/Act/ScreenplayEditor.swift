@@ -653,6 +653,33 @@ final class ScreenplayTextView: NSTextView {
 
     private var keyObserver: NSObjectProtocol?
     override var undoManager: UndoManager? { screenplayDocument?.undoManager }
+    private var nativeEditUndoManager: UndoManager?
+
+    override func shouldChangeText(inRanges affectedRanges: [NSValue], replacementStrings: [String]?) -> Bool {
+        // AppKit prepares undo before notifying the document. IPC uses explicit groups,
+        // so native input must open its group before AppKit checks the replacement.
+        let manager = undoManager
+        let ownsGroup = nativeEditUndoManager == nil && manager?.groupingLevel == 0
+        if ownsGroup {
+            manager?.beginUndoGrouping()
+            nativeEditUndoManager = manager
+        }
+        let accepted = super.shouldChangeText(inRanges: affectedRanges, replacementStrings: replacementStrings)
+        if !accepted && ownsGroup { finishNativeEdit() }
+        return accepted
+    }
+
+    override func didChangeText() {
+        // The delegate records the source mutation inside the same transaction.
+        super.didChangeText()
+        finishNativeEdit()
+    }
+
+    private func finishNativeEdit() {
+        guard let manager = nativeEditUndoManager else { return }
+        nativeEditUndoManager = nil
+        manager.endUndoGrouping()
+    }
 
     var continuations: [Continuation] { continuations(in: NSRange(location: 0, length: (string as NSString).length)) }
 
