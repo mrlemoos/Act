@@ -1,0 +1,9 @@
+"Time of day|DAY" = "DIA";
+"Time of day|NIGHT" = "NOITE";
+"Time of day|DAWN" = "AMANHECER";
+"Time of day|DUSK" = "ENTARDECER";
+"Time of day|MORNING" = "MANHÃ";
+"Time of day|EVENING" = "ANOITECER";
+"Time of day|LATER" = "MAIS TARDE";
+"Time of day|CONTINUOUS" = "CONTÍNUO";
+"Time of day|SAME" = "MESMO INSTANTE";

@@ -18,6 +18,8 @@ Startup checker flags metadata inconsistencies and lifecycle review candidates. 
 
 ## Active work
 
+- [Screenplay autocomplete](autocomplete.md)
+
 - [Automated downloadable macOS releases](automated-download-releases.md), implemented locally with hosted publication and first-download verification remaining.
 
 - [Screenplay pinch zoom](screenplay-zoom.md), implemented with physical trackpad validation remaining.

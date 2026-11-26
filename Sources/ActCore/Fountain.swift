@@ -174,6 +174,23 @@ public enum FountainParser {
         return (visible, hiddenKind)
     }
 
+    public static func isSceneHeadingLine(_ text: String) -> Bool {
+        isSceneHeading(text)
+    }
+
+    public static func isCharacterCue(_ text: String) -> Bool {
+        isCharacter(text)
+    }
+
+    /// Returns the trailing Fountain scene-number suffix on a heading line, if present.
+    public static func trailingSceneNumberSuffix(in line: String) -> String? {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        guard trimmed.hasSuffix("#"), let start = trimmed.dropLast().lastIndex(of: "#") else { return nil }
+        let inner = trimmed[trimmed.index(after: start)..<trimmed.index(before: trimmed.endIndex)]
+        guard !inner.isEmpty else { return nil }
+        return String(trimmed[start...])
+    }
+
     private static func isSceneHeading(_ text: String) -> Bool {
         if text.hasPrefix("."), text.count > 1,
            text.dropFirst().unicodeScalars.first.map(CharacterSet.alphanumerics.contains) == true { return true }
