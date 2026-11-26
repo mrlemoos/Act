@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { identity, publish, type Run } from './release';
 
 const originalDirectory = process.cwd();
-const id = identity('a'.repeat(40), '12345');
+const id = identity('a'.repeat(40), '12345', '42');
 let directory: string;
 let calls: string[][];
 beforeEach(async () => {
@@ -37,9 +37,9 @@ function github(state: 'missing' | 'draft' | 'published' | 'unavailable', failUp
   };
 }
 test('identifiers distinguish pushes and reject malformed input', () => {
-  expect(identity(id.sha, '12346').tag).not.toBe(id.tag);
-  expect(() => identity('main', '12345')).toThrow();
-  expect(() => identity(id.sha, '../12345')).toThrow();
+  expect(identity(id.sha, '12346', '43').tag).not.toBe(id.tag);
+  expect(() => identity('main', '12345', '42')).toThrow();
+  expect(() => identity(id.sha, '../12345', '42')).toThrow();
 });
 test('new release stays a draft until upload succeeds and targets exact commit', async () => {
   await publish(id, 'example/Act', github('missing'));
@@ -79,4 +79,14 @@ test('a conflicting existing release is not modified', async () => {
   };
   await expect(publish(id, 'example/Act', exec)).rejects.toThrow('another commit');
   expect(calls).toHaveLength(1);
+});
+
+test('Actions run number generates stable semantic versions across retries', () => {
+  expect(id.version).toBe('0.1.42');
+  expect(id.tag).toBe('v0.1.42');
+  expect(id.asset).toBe('Act-v0.1.42-macOS-arm64.zip');
+  expect(identity(id.sha, id.run, '42')).toEqual(id);
+  for (const value of ['', '0', '01', '-1', '1.2', '9007199254740992']) {
+    expect(() => identity(id.sha, id.run, value)).toThrow('run number');
+  }
 });

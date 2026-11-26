@@ -23,7 +23,7 @@ The sections below are the working guide: install, writing, shots, local models,
 
 ## Download
 
-Download an Apple Silicon ZIP from [GitHub Releases](https://github.com/mrlemoos/Act/releases). Each successful push to `main` produces a separate release targeting that commit. Requires macOS 15 or later on an Apple Silicon Mac. Intel Macs are not supported by these downloads.
+Download an Apple Silicon ZIP from [GitHub Releases](https://github.com/mrlemoos/Act/releases). Each successful push to `main` produces a separate release targeting that commit. Actions generates version `0.1.<run number>`, tag `v0.1.<run number>` and the matching app marketing version. Reruns keep the same version; failed runs can leave gaps. Requires macOS 15 or later on an Apple Silicon Mac. Intel Macs are not supported by these downloads.
 
 Extract `Act.app` and copy it to Applications. These builds are ad-hoc signed, not Developer ID signed or notarised. Gatekeeper may block opening the app. If you trust the download, review the warning and use System Settings > Privacy & Security > Open Anyway where macOS offers it. Do not disable Gatekeeper.
 

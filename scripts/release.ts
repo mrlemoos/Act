@@ -3,12 +3,16 @@ import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-export function identity(sha: string, run: string) {
+export function identity(sha: string, run: string, runNumber: string) {
   if (!/^[a-f0-9]{40}$/.test(sha) || !/^[1-9][0-9]*$/.test(run)) {
     throw new Error('Expected a full commit SHA and positive Actions run ID');
   }
-  const tag = `build-${run}-${sha.slice(0, 12)}`;
-  return { sha, run, tag, asset: `Act-${tag}-macOS-arm64.zip` };
+  if (!/^[1-9][0-9]*$/.test(runNumber) || !Number.isSafeInteger(Number(runNumber))) {
+    throw new Error('Expected a positive Actions run number');
+  }
+  const version = `0.1.${runNumber}`;
+  const tag = `v${version}`;
+  return { sha, run, version, tag, asset: `Act-${tag}-macOS-arm64.zip` };
 }
 
 type Identity = ReturnType<typeof identity>;
@@ -51,6 +55,7 @@ async function packageApp(id: Identity) {
   try {
     const app = join(staging, 'Act.app');
     await run(['ditto', '.build/Act.app', app]);
+    await run(['/usr/libexec/PlistBuddy', '-c', `Set :CFBundleShortVersionString ${id.version}`, `${app}/Contents/Info.plist`]);
     await run(['/usr/libexec/PlistBuddy', '-c', `Set :CFBundleVersion ${id.run}`, `${app}/Contents/Info.plist`]);
     await run(['codesign', '--force', '--sign', '-', `${app}/Contents/Helpers/act`]);
     await run(['codesign', '--force', '--sign', '-', app]);
@@ -79,7 +84,7 @@ async function packageApp(id: Identity) {
 export async function publish(id: Identity, repo: string, exec: Run = run) {
   if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new Error('Invalid repository');
   const manifest = JSON.parse(await readFile(`${output}/release.json`, 'utf8'));
-  if (manifest.sha !== id.sha || manifest.run !== id.run || manifest.tag !== id.tag || manifest.asset !== id.asset ||
+  if (manifest.sha !== id.sha || manifest.run !== id.run || manifest.version !== id.version || manifest.tag !== id.tag || manifest.asset !== id.asset ||
       manifest.sha256 !== digest(await readFile(`${output}/${id.asset}`))) {
     throw new Error('Release artifact identity or checksum mismatch');
   }
@@ -105,7 +110,7 @@ export async function publish(id: Identity, repo: string, exec: Run = run) {
 }
 
 if (import.meta.main) {
-  const id = identity(process.env.GITHUB_SHA ?? '', process.env.GITHUB_RUN_ID ?? '');
+  const id = identity(process.env.GITHUB_SHA ?? '', process.env.GITHUB_RUN_ID ?? '', process.env.GITHUB_RUN_NUMBER ?? '');
   if (process.argv[2] === 'package') await packageApp(id);
   else if (process.argv[2] === 'publish') await publish(id, process.env.GITHUB_REPOSITORY ?? '');
   else throw new Error('Usage: bun scripts/release.ts package|publish');
