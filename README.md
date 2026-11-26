@@ -108,6 +108,12 @@ To run the opt-in real-model adapter check:
 ACT_TEST_MODEL=/absolute/path/to/model.gguf swift test --filter GenerationTests
 ```
 
+## Overhead blocking plans
+
+With shots ready for a scene, open **Shot list > Blocking plan…**. Generate a local draft, select each shot's overlay and review inferred geography before accepting it. Named overhead people, furniture and a camera/tripod piece can be dragged directly around the scene. Pull their handles to turn people or aim the camera. Movement paths remain editable; numeric controls are available on selection. Actor positions can apply to the selected shot or the shared starting layout. Undo/redo works within the open editor. Changes recover beside Act's other application data; save an explicit `.blocking.json` file to keep an editable, portable plan.
+
+Optional PNG/JPEG floor plans and photographs can guide manual placement. The existing local text model reads their geometry notes, not image pixels. It performs separate geography and camera passes using the runtime/model selected in Local AI. Conflicting directions and changed shots require review; regeneration never silently replaces accepted work. PDF/PNG export captures the selected shot, with draft or stale labels where applicable. [Scope, validation and limits](docs/specs/overhead-blocking-plans-validation.md).
+
 ## Character reference sheets
 
 Select a character name inside an action paragraph, right-click and choose **Mark as New Character**. To add another introduction or appearance description to the same character, select that occurrence and choose **Link to Character**. Command-M does the same from the keyboard: it links the selection to an existing character with the same name, ignoring case, or creates a new one. Without a markable selection, Command-M minimises the window as usual. Marks have persistent character colours and are stored separately from Fountain. Act does not discover or mark other characters automatically.

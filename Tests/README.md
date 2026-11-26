@@ -32,6 +32,7 @@ Current suite: 93 core tests and 32 native app tests. The character-sheet valida
 | Recovery metadata, first-save/rename migration, unique matching and write failure | ShotRecoveryTests |
 | Generation locks, missing setup, asynchronous failure and preserved manual work | ShotWorkspaceTests |
 | Local process success/failure/cancellation, trusted scene IDs and malformed output | GenerationTests |
+| Overhead draft review, revision guards, editable geometry, embedded-reference PNG export and native recovery | BlockingPlanTests; CLI/src/blocking/model.test.ts |
 | Manual action-name marks, comment exclusion, physical evidence, linked traits and stale anchors | CharacterSheetTests |
 | Offline MLX arguments, literal prompts, raster validation and subprocess-group cancellation | CharacterSheetTests |
 | Native highlight/source/caret/undo preservation, portable libraries, prompts and Save As | CharacterWorkspaceTests |

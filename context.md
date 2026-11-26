@@ -16,6 +16,8 @@ Link relevant [specs](docs/specs/README.md). Completed changes retain durable ra
 
 ## Screenwriting
 
+[Overhead blocking plans](docs/specs/overhead-blocking-plans.md) adds TypeScript-backed local generation of editable scene plans after shot lists, with review, change flags and PDF/PNG export. Reference images guide manual placement; geometry notes guide the text model. See linked validation for evidence and limits.
+
 Act is a macOS-only Swift app for editing UTF-8 Fountain and planning shots with offline Apple Silicon inference. Raw Fountain remains authoritative. Shot lists are separate versioned JSON files; generation never edits screenplay source.
 
 Active specification: [Act screenwriting v1](docs/specs/screenwriting/spec.md). Formatted editing restyles per line, not per keystroke: [ADR 0001](docs/adr/0001-line-scoped-editor-styling.md). Validation: `swift test`, `scripts/build-app.sh`, and `node .galicia/check.ts`. See [README](README.md) for native checks and model setup.

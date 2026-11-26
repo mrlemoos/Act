@@ -263,6 +263,7 @@ struct ShotWorkspace: View {
     @ObservedObject var document: FountainDocument
     @ObservedObject private var model: ShotWorkspaceModel
     @State private var showingSetup = false
+    @State private var blockingSceneID: String?
     @State private var untitledIdentity = UUID().uuidString
     init(document: FountainDocument) {
         self.document = document
@@ -288,6 +289,9 @@ struct ShotWorkspace: View {
                         .help(L10n.string("Unsaved shot-list changes", table: "Shots")).accessibilityLabel(L10n.string("Unsaved shot-list changes", table: "Shots"))
                 }
                 Spacer()
+                Button("Blocking plan…") { blockingSceneID = scene?.id }
+                    .disabled(scene == nil || visibleShots.isEmpty || model.isGenerating)
+                    .help("Plan actor and camera positions for this scene’s shots")
                 if model.isGenerating || model.isDownloading {
                     ProgressView().controlSize(.small)
                         .accessibilityLabel(model.isGenerating ? L10n.string("Generating shots", table: "Shots") : L10n.string("Downloading model", table: "Shots"))
@@ -357,6 +361,9 @@ struct ShotWorkspace: View {
         }
         .alert(L10n.string("Shot list", table: "Shots"), isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) { Button(L10n.string("OK", table: "Shots")) { model.error = nil } } message: { Text(model.error ?? "") }
         .sheet(isPresented: $showingSetup) { setupView }
+        .sheet(isPresented: Binding(get: { blockingSceneID != nil }, set: { if !$0 { blockingSceneID = nil } })) {
+            if let blockingSceneID { BlockingPlanWorkspace(document: document, shots: model, sceneID: blockingSceneID) }
+        }
     }
 
     private func emptyState(_ text: String) -> some View {

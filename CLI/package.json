@@ -6,7 +6,7 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "check:contract": "bun contract.ts --check",
-    "build": "bun build --compile --minify --outfile ../.build/act src/main.ts"
+    "build": "zsh ../scripts/build-cli.sh"
   },
   "devDependencies": {
     "@types/bun": "^1.4.5",

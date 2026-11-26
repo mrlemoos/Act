@@ -18,6 +18,8 @@ Startup checker flags metadata inconsistencies and lifecycle review candidates. 
 
 ## Active work
 
+- [Overhead blocking plans](overhead-blocking-plans.md), implemented with local spatial review and reference-image limitations recorded in validation.
+
 - [Screenplay autocomplete](autocomplete.md)
 
 - [Automated downloadable macOS releases](automated-download-releases.md), implemented locally with hosted publication and first-download verification remaining.

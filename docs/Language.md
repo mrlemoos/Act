@@ -16,5 +16,6 @@ Define business concepts, not frameworks, libraries or implementation types. One
 | AI review history | Persistent before/after records for automated screenplay edits | A removed paragraph and its former location | Survives relaunch outside Fountain; native undo need not survive |
 | Storyboard image | Versioned raster image linked to a shot-list entry | A wide frame of the courtyard | Separate from shot text and character reference sheets |
 | Image request | Prepared description, selected references and intended image target | A reviewed shot prompt with two character sheets | Preparation/export does not itself transmit or generate an image |
+| Overhead blocking plan | Editable scene geography with selectable shot overlays for actors, camera positions, framing and movement | A kitchen plan showing the camera for a medium shot | An overhead camera plot, distinct from a storyboard image; inferred geography requires review |
 
 Record ambiguity as unresolved. Agree meaning before updating contracts or acceptance checks. Use these terms consistently in code, specs, tickets and ADRs.

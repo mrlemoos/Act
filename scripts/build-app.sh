@@ -2,6 +2,7 @@
 set -eu
 cd "${0:A:h}/.."
 configuration="${1:-debug}"
+zsh scripts/build-cli.sh
 swift build -c "$configuration"
 app=".build/Act.app"
 # Rebuild the generated bundle so removed resources cannot enter a download.
@@ -9,9 +10,10 @@ rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Helpers" "$app/Contents/Resources"
 binary_directory="$(swift build -c "$configuration" --show-bin-path)"
 cp "$binary_directory/Act" "$app/Contents/MacOS/Act"
-zsh scripts/build-cli.sh
 cp .build/act "$app/Contents/Helpers/act"
+cp .build/act-blocking "$app/Contents/Helpers/act-blocking"
 /usr/bin/codesign --force --sign - "$app/Contents/Helpers/act"
+/usr/bin/codesign --force --sign - "$app/Contents/Helpers/act-blocking"
 cp Resources/Info.plist "$app/Contents/Info.plist"
 cp Resources/Act.icns "$app/Contents/Resources/Act.icns"
 for localisation in Resources/*.lproj; do

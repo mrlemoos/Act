@@ -9,5 +9,5 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["contract.ts", "integration.ts", "src/**/*.ts"]
+  "include": ["contract.ts", "integration.ts", "src/**/*.ts", "blocking/**/*.ts"]
 }
