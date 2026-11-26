@@ -105,7 +105,9 @@ final class FountainDocument: NSDocument, ObservableObject {
         if ownsUndoGroup { undoManager?.beginUndoGrouping() }
         defer { if ownsUndoGroup { undoManager?.endUndoGrouping() } }
         if !suppressSourceUndo {
-            undoManager?.registerUndo(withTarget: self) { target in target.replaceSource(previous) }
+            undoManager?.registerUndo(withTarget: self) { target in
+                MainActor.assumeIsolated { target.replaceSource(previous) }
+            }
             undoManager?.setActionName(L10n.string("Writing", table: "Writing"))
         }
         source = newSource
@@ -326,7 +328,11 @@ final class FountainDocument: NSDocument, ObservableObject {
         replaceSource(preview.result)
         suppressSourceUndo = false
         applyingAutomation = false
-        undoManager?.registerUndo(withTarget: self) { target in target.restoreAIState(source: previousSource, ledger: previousLedger, epoch: epoch) }
+        undoManager?.registerUndo(withTarget: self) { target in
+            MainActor.assumeIsolated {
+                target.restoreAIState(source: previousSource, ledger: previousLedger, epoch: epoch)
+            }
+        }
         undoManager?.setActionName(automationText("AI edit"))
         undoManager?.endUndoGrouping()
         aiReview = rebased
@@ -376,7 +382,11 @@ final class FountainDocument: NSDocument, ObservableObject {
 
     private func restoreAIState(source restoredSource: String, ledger: AutomationReviewLedger, epoch: UUID) {
         let currentSource = source, currentLedger = aiReview
-        undoManager?.registerUndo(withTarget: self) { target in target.restoreAIState(source: currentSource, ledger: currentLedger, epoch: epoch) }
+        undoManager?.registerUndo(withTarget: self) { target in
+            MainActor.assumeIsolated {
+                target.restoreAIState(source: currentSource, ledger: currentLedger, epoch: epoch)
+            }
+        }
         applyingAutomation = true; suppressSourceUndo = true
         replaceSource(restoredSource)
         applyingAutomation = false; suppressSourceUndo = false

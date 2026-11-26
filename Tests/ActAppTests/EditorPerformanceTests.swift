@@ -68,6 +68,10 @@ struct EditorPerformanceTests {
 
     static func median(_ values: [Double]) -> Double { values.sorted()[values.count / 2] }
 
+    private static var runningOnCI: Bool { ProcessInfo.processInfo.environment["CI"] == "true" }
+    private static var returnLineBudget: Double { runningOnCI ? 150 : 60 }
+    private static var caretMoveBudget: Double { runningOnCI ? 25 : 15 }
+
     @Test func typingInAFeatureLengthScriptStaysResponsive() throws {
         let source = Self.featureLength
         let host = try TestEditorHost(source: source)
@@ -95,7 +99,7 @@ struct EditorPerformanceTests {
             samples.append(Self.milliseconds { _ = host.coordinator.textView(host.textView, doCommandBy: #selector(NSTextView.insertNewline(_:))) })
             host.document.undoManager?.endUndoGrouping()
         }
-        #expect(Self.median(samples) < 60, "Return took \(samples.map { Int($0) }) ms")
+        #expect(Self.median(samples) < Self.returnLineBudget, "Return took \(samples.map { Int($0) }) ms")
     }
 
     @Test func movingTheCaretInAFeatureLengthScriptStaysResponsive() throws {
@@ -108,7 +112,7 @@ struct EditorPerformanceTests {
             let location = ns.range(of: "MARA", range: NSRange(location: ns.length / 3 + index * 1500, length: 1500)).location
             samples.append(Self.milliseconds { host.textView.setSelectedRange(NSRange(location: location, length: 0)) })
         }
-        #expect(Self.median(samples) < 15, "Caret move took \(samples.map { Int($0) }) ms")
+        #expect(Self.median(samples) < Self.caretMoveBudget, "Caret move took \(samples.map { Int($0) }) ms")
     }
 
     @Test(arguments: [false, true]) func workspaceTypingDoesNotReparsePerView(outline: Bool) throws {

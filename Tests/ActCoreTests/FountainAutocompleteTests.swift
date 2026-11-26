@@ -104,8 +104,8 @@ final class FountainAutocompleteTests: XCTestCase {
             (".INT. ROOM - N #é12#", "NUIT", ".INT. ROOM - NUIT #é12#")
         ] {
             let source = prefix + typed + "\r\n"
-            let caret = (source as NSString).range(of: " #é12#").location
-            let selection = NSRange(location: caret == NSNotFound ? (prefix as NSString).length + (typed as NSString).length : caret, length: 0)
+            let typedRange = (source as NSString).range(of: typed)
+            let selection = NSRange(location: NSMaxRange(typedRange), length: 0)
             let session = try XCTUnwrap(FountainAutocomplete.session(source: source, selection: selection))
             let item = try XCTUnwrap(FountainAutocomplete.suggestions(for: session, screenplay: FountainParser.parse(source), libraryNames: [], locale: "en-GB").first { $0.insertText == wanted })
             let applied = try XCTUnwrap(FountainAutocomplete.applying(item, to: source, session: session))

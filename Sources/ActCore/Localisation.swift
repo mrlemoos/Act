@@ -41,7 +41,12 @@ public enum L10n {
     static var resourceBundle: Bundle { .module }
 
     private static func bundle(for language: String) -> Bundle? {
-        guard let path = resourceBundle.path(forResource: language, ofType: "lproj") else { return nil }
-        return Bundle(path: path)
+        if let path = resourceBundle.path(forResource: language, ofType: "lproj") {
+            return Bundle(path: path)
+        }
+        guard let url = resourceBundle.resourceURL?
+            .appendingPathComponent("\(language).lproj", isDirectory: true),
+              FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return Bundle(path: url.path)
     }
 }

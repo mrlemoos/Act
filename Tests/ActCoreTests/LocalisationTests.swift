@@ -23,10 +23,12 @@ final class LocalisationTests: XCTestCase {
         XCTAssertEqual(L10n.format("%2$@ · %1$lld", 12, "Café %@", table: "Menus", locale: "fr-FR"), "Café %@ · 12")
     }
 
-    func testAllDeclaredLanguagesExistInResourceBundle() {
+    func testAllDeclaredLanguagesExistInResourceBundle() throws {
+        let root = try XCTUnwrap(L10n.resourceBundle.resourceURL)
         for locale in L10n.supportedLocales {
-            XCTAssertNotNil(L10n.resourceBundle.path(forResource: locale, ofType: "lproj"), locale)
-            XCTAssertNotNil(L10n.resourceBundle.path(forResource: "Menus", ofType: "strings", inDirectory: "\(locale).lproj"), locale)
+            let lproj = root.appendingPathComponent("\(locale).lproj", isDirectory: true)
+            XCTAssertTrue(FileManager.default.fileExists(atPath: lproj.path), locale)
+            XCTAssertTrue(FileManager.default.fileExists(atPath: lproj.appendingPathComponent("Menus.strings").path), locale)
         }
     }
 

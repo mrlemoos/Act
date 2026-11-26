@@ -25,7 +25,9 @@ final class ProjectBoardDocument: NSDocument, ObservableObject {
     }
     private func restore(_ value: ProjectBoard, title: String) {
         let old = board
-        undoManager?.registerUndo(withTarget: self) { $0.restore(old, title: title) }
+        undoManager?.registerUndo(withTarget: self) { target in
+            MainActor.assumeIsolated { target.restore(old, title: title) }
+        }
         undoManager?.setActionName(title)
         board = value
         updateChangeCount(undoManager?.isUndoing == true ? .changeUndone : undoManager?.isRedoing == true ? .changeRedone : .changeDone)
