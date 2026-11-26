@@ -107,6 +107,7 @@ struct ScreenplayEditor: NSViewRepresentable {
         var parent: ScreenplayEditor
         weak var textView: NSTextView?
         var lastSelectionRequest: UUID
+        let autocomplete = ScreenplayAutocompleteController()
         private var isStyling = false
         private var isApplyingSource = false
         var isUpdatingView = false
@@ -145,6 +146,15 @@ struct ScreenplayEditor: NSViewRepresentable {
         init(_ parent: ScreenplayEditor) {
             self.parent = parent
             self.lastSelectionRequest = parent.selectionRequest
+            super.init()
+            autocomplete.onApply = { [weak self] source, selection in
+                guard let self, let textView = self.textView else { return }
+                self.autocomplete.dismiss()
+                self.parent.document.replaceSource(source)
+                self.applyExternalSource(source)
+                textView.setSelectedRange(selection)
+                self.format()
+            }
         }
 
         private var configuration: Configuration {
@@ -181,16 +191,25 @@ struct ScreenplayEditor: NSViewRepresentable {
         }
 
         func textDidChange(_ notification: Notification) {
-            guard !isStyling, let textView else { return }
+            guard !isStyling, !isApplyingSource, let textView else { return }
             parent.document.replaceSource(textView.string, deferringOutline: true)
             if editCrossesLines {
                 editCrossesLines = false
                 format()
             }
+            refreshAutocomplete()
+        }
+
+        func refreshAutocomplete() {
+            guard !isApplyingSource, !isStyling, !isUpdatingView, let textView else { return }
+            autocomplete.refresh(textView: textView, source: textView.string,
+                                 screenplay: { parent.characters.parsedScreenplay(for: textView.string) },
+                                 libraryNames: parent.characters.library.characters.map(\.name))
         }
 
         func textViewDidChangeSelection(_ notification: Notification) {
             guard !isStyling, !isApplyingSource, let textView else { return }
+            autocomplete.dismiss()
             if lineStart(in: textView) != activeLineStart { format() } else { refreshTypingAttributes() }
         }
 
@@ -200,6 +219,20 @@ struct ScreenplayEditor: NSViewRepresentable {
         }
 
         func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            if autocomplete.isVisible, !textView.hasMarkedText(),
+               NSEvent.modifierFlags.intersection([.shift, .control, .option, .command]).isEmpty {
+                switch commandSelector {
+                case #selector(NSTextView.insertNewline(_:)), #selector(NSTextView.insertTab(_:)):
+                    return autocomplete.accept()
+                case #selector(NSResponder.moveUp(_:)):
+                    autocomplete.moveHighlight(-1); return true
+                case #selector(NSResponder.moveDown(_:)):
+                    autocomplete.moveHighlight(1); return true
+                case #selector(NSResponder.cancelOperation(_:)):
+                    autocomplete.dismiss(); return true
+                default: break
+                }
+            }
             if commandSelector == #selector(NSTextView.insertNewline(_:)), !textView.hasMarkedText() {
                 let selection = textView.selectedRange()
                 let insertion = FountainEditing.returnInsertion(in: textView.string, selection: selection)
@@ -219,6 +252,7 @@ struct ScreenplayEditor: NSViewRepresentable {
 
         /// Replaces only the differing span, so attributes outside it survive undo, redo and paper changes.
         func applyExternalSource(_ newSource: String) {
+            autocomplete.dismiss()
             guard let textView, let storage = textView.textStorage else { return }
             let old = storage.string as NSString, new = newSource as NSString
             let limit = min(old.length, new.length)
@@ -693,7 +727,10 @@ final class ScreenplayTextView: NSTextView {
 
     override func resignFirstResponder() -> Bool {
         let resigned = super.resignFirstResponder()
-        if resigned { (delegate as? ScreenplayEditor.Coordinator)?.format() }
+        if resigned {
+            (delegate as? ScreenplayEditor.Coordinator)?.autocomplete.dismiss()
+            (delegate as? ScreenplayEditor.Coordinator)?.format()
+        }
         return resigned
     }
 

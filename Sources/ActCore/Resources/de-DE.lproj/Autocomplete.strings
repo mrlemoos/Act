@@ -1,0 +1,9 @@
+"Time of day|DAY" = "TAG";
+"Time of day|NIGHT" = "NACHT";
+"Time of day|DAWN" = "MORGENGRAUEN";
+"Time of day|DUSK" = "ABENDDÄMMERUNG";
+"Time of day|MORNING" = "MORGEN";
+"Time of day|EVENING" = "ABEND";
+"Time of day|LATER" = "SPÄTER";
+"Time of day|CONTINUOUS" = "DURCHGEHEND";
+"Time of day|SAME" = "GLEICHZEITIG";

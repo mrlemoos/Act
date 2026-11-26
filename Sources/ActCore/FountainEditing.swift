@@ -19,7 +19,7 @@ public enum FountainEditing {
         return isDialogue ? terminator : terminator + terminator
     }
 
-    private static func lineEnding(in text: NSString, start: Int, end: Int, contentsEnd: Int) -> String {
+    static func lineEnding(in text: NSString, start: Int, end: Int, contentsEnd: Int) -> String {
         if end > contentsEnd {
             let current = text.substring(with: NSRange(location: contentsEnd, length: end - contentsEnd))
             if ["\n", "\r\n", "\r"].contains(current) { return current }

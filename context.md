@@ -29,3 +29,5 @@ Active specification: [Act screenwriting v1](docs/specs/screenwriting/spec.md). 
 [App localisation](docs/specs/localisation.md) adds seven interface locales through native macOS language preferences; document content remains literal.
 
 [AI editing and automation](docs/specs/ai-cli.md) adds a standalone TypeScript CLI and accessible Automation window backed by one app-owned Swift service. Managed projects live under `~/Documents/Act`. Source edits use preview, revision checks and native undo, with persistent visual review outside Fountain. [ADR 0002](docs/adr/0002-app-owned-automation.md) owns the process boundary; [validation](docs/specs/ai-cli/validation.md) records evidence and limits.
+
+[Screenplay autocomplete](docs/specs/autocomplete.md) adds local cue, heading and transition completions through native document undo, preserving line-scoped styling.
