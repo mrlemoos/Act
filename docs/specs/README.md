@@ -32,5 +32,3 @@ Startup checker flags metadata inconsistencies and lifecycle review candidates. 
 - [Project board](project-board.md)
 
 - [App localisation](localisation.md)
-
-- [Character, slugline and transition autocomplete](autocomplete.md)
