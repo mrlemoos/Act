@@ -48,12 +48,12 @@ struct StoryboardImageStrip: View {
                     }
                 }
                 .frame(maxWidth: 250)
-                .onChange(of: selectedID, selectVersion)
+                .onChange(of: selectedID, perform: selectVersion)
             }
             if let error { Text(error).font(.caption).foregroundStyle(.red) }
         }
-        .onAppear(perform: refresh)
-        .onChange(of: service.imageRevision) { refresh() }
+        .onAppear { refresh() }
+        .onChange(of: service.imageRevision) { _ in refresh() }
     }
 
     private var versionRows: [(id: String, title: String)] {
