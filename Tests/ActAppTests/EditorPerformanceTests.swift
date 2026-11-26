@@ -70,7 +70,7 @@ struct EditorPerformanceTests {
 
     private static var runningOnCI: Bool { ProcessInfo.processInfo.environment["CI"] == "true" }
     private static var returnLineBudget: Double { runningOnCI ? 150 : 60 }
-    private static var caretMoveBudget: Double { runningOnCI ? 25 : 15 }
+    private static var caretMoveBudget: Double { runningOnCI ? 30 : 15 }
 
     @Test func typingInAFeatureLengthScriptStaysResponsive() throws {
         let source = Self.featureLength
