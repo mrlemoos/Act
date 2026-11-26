@@ -22,7 +22,19 @@ Native view renders were produced at 1280 and 820 points in light/dark appearanc
 
 Card drag attempts did not establish movement. Later attempts returned CUA `ScreenCaptureKit.SCStreamErrorDomain Code=-3812` and `noWindowsAvailable`. Gesture priority was adjusted, but successful native drag and pinch evidence is still required. Do not interpret tested coordinate transformations as physical trackpad proof.
 
+A transparent scroll/pinch overlay now receives trackpad navigation even when the pointer is over cards; confirm on desktop that card-header drags and background pans still feel correct.
+
 Group dragging, relinking dialogs, asset opening/sharing, close/reopen and crash/relaunch recovery still need complete desktop workflow checks. Native persistence APIs and conflict tests cover state preservation, not these OS interaction paths. Parent specification and relevant tickets remain active.
+
+## Cloud agent (2025-11-20)
+
+The Linux cloud agent could not run `swift test` or `scripts/build-app.sh`. It added ActCore coverage for open routing, explicit cross-draft sharing, relink path updates, linked-scene filtering, and validated character preview paths. Re-run the validation commands on macOS before closing the parent specification.
+
+## Local PR review fixes, 2026-11-26
+
+PR #1 was applied locally on main for validation. Its character-library fixture now uses the supported empty initialiser and assigns the character collection separately. The relink test checks the original preview, expects no preview when the owner points to a replacement without a library, and checks preview recovery after relinking back. Replacement paths remain inside the test's temporary directory.
+
+The focused `ProjectBoardTests` run passed all 8 tests. The `ActCoreTests` run passed 58 tests in 8 suites. Both runs compiled the app and test targets using an isolated scratch build. The full suite crashed with signal 5 inside the sandbox; an unrestricted retry stopped making progress and was interrupted. No full-suite pass or physical navigation validation is claimed. No commit or push was performed.
 
 ## Reference contracts
 
