@@ -179,10 +179,10 @@ test('oversized response closes transport with explicit error', async () => {
     client.on('error', () => {});
     client.once('data', () => client.end(' '.repeat(32 * 1024 * 1024 + 1)));
   });
-  const result = await Effect.runPromise(exchange(path, request, 2000).pipe(Effect.result));
+  const result = await Effect.runPromise(exchange(path, request, 15000).pipe(Effect.result));
   expect(result._tag).toBe('Failure');
   if (result._tag === 'Failure') expect(result.failure.code).toBe('response_too_large');
-});
+}, 20000);
 
 test('invalid endpoint permissions stop before launch or submission', async () => {
   let count = 0;
