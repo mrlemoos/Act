@@ -109,10 +109,13 @@ struct EditorPerformanceTests {
         defer { host.close() }
         let ns = source as NSString
         var samples: [Double] = []
+
         for index in 0..<7 {
             let location = ns.range(of: "MARA", range: NSRange(location: ns.length / 3 + index * 1500, length: 1500)).location
             samples.append(Self.milliseconds { host.textView.setSelectedRange(NSRange(location: location, length: 0)) })
         }
+
+        print("Caret samples: \(samples) ms; median: \(Self.median(samples)) ms")
         #expect(Self.median(samples) < Self.caretMoveBudget, "Caret move took \(samples.map { Int($0) }) ms")
     }
 

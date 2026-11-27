@@ -115,6 +115,8 @@ struct ScreenplayEditor: NSViewRepresentable {
         private var activeLineStart: Int?
         private var styledConfiguration: Configuration?
         private var styled: [Presentation] = []
+        private var styledScreenplay: FountainScreenplay?
+        private var activeElementIndex: Int?
         /// Characters edited since the last commit. Elements touching it never match old presentations by position.
         private var edited: NSRange?
         private(set) var highlightedRevision: Int?
@@ -132,7 +134,7 @@ struct ScreenplayEditor: NSViewRepresentable {
             let continuation: String?
             let blankLinesBefore: Int
             let collapsed: Bool
-            let faded: Bool
+            var faded: Bool
 
             func isSameLine(as other: Presentation) -> Bool { kind == other.kind && length == other.length && text == other.text }
         }
@@ -289,6 +291,7 @@ struct ScreenplayEditor: NSViewRepresentable {
 
         func format() {
             guard !isStyling, let textView, !textView.hasMarkedText(), let storage = textView.textStorage else { return }
+            let sourceUnchanged = styledScreenplay?.source.isLiterallyEqual(to: textView.string) == true
             isStyling = true
             defer { isStyling = false }
             let configuration = configuration
@@ -299,6 +302,7 @@ struct ScreenplayEditor: NSViewRepresentable {
                 storage.setAttributes([.font: font, .foregroundColor: NSColor.textColor, .paragraphStyle: base],
                                       range: NSRange(location: 0, length: storage.length))
                 styled = []
+                styledScreenplay = nil
                 styledConfiguration = configuration
             }
             var restyled: [NSRange] = []
@@ -320,7 +324,7 @@ struct ScreenplayEditor: NSViewRepresentable {
             refreshTypingAttributes()
             textView.needsDisplay = true
             // Mid-edit commits see text the document has not received yet; the commit after it refreshes.
-            guard parent.document.source.isLiterallyEqual(to: textView.string) else { return }
+            guard !sourceUnchanged, parent.document.source.isLiterallyEqual(to: textView.string) else { return }
             if isUpdatingView {
                 // SwiftUI view updates must not publish synchronously.
                 DispatchQueue.main.async { [weak document = parent.document] in document?.refreshOutline() }
@@ -340,6 +344,9 @@ struct ScreenplayEditor: NSViewRepresentable {
 
         private func restyleChangedLines(in textView: NSTextView, storage: NSTextStorage, font: NSFont, base: NSParagraphStyle, columnWidth: CGFloat) -> [NSRange] {
             let source = textView.string
+            if edited == nil, let script = styledScreenplay, script.source.isLiterallyEqual(to: source) {
+                return restyleSelection(in: textView, script: script, storage: storage, font: font, base: base, columnWidth: columnWidth)
+            }
             let script = parent.characters.parsedScreenplay(for: source)
             let cursor = textView.selectedRange().location
             let cues = ScreenplayPresentation.characterCues(in: script, settings: parent.settings)
@@ -374,7 +381,36 @@ struct ScreenplayEditor: NSViewRepresentable {
                 restyled.append(lineRange)
             }
             styled = desired
+            styledScreenplay = script
+            activeElementIndex = desired.firstIndex { !$0.faded }
             return restyled
+        }
+
+        /// An unchanged screenplay only needs marker visibility updated at the old and new caret positions.
+        private func restyleSelection(in textView: NSTextView, script: FountainScreenplay, storage: NSTextStorage,
+                                      font: NSFont, base: NSParagraphStyle, columnWidth: CGFloat) -> [NSRange] {
+            let cursor = textView.selectedRange().location
+            var lower = 0, upper = script.elements.count
+            while lower < upper {
+                let middle = (lower + upper) / 2
+                if script.elements[middle].range.location <= cursor { lower = middle + 1 }
+                else { upper = middle }
+            }
+            let selected = lower > 0 && NSLocationInRange(cursor, script.elements[lower - 1].range) ? lower - 1 : nil
+            guard selected != activeElementIndex else { return [] }
+            let changed = [activeElementIndex, selected].compactMap { $0 }
+            activeElementIndex = selected
+            let source = script.source
+            let ns = source as NSString
+            let lineHeight = (textView.layoutManager?.defaultLineHeight(for: font) ?? (font.ascender - font.descender + font.leading)) + base.lineSpacing
+            return changed.map { index in
+                let element = script.elements[index]
+                styled[index].faded = index != selected
+                let range = ns.lineRange(for: element.range)
+                style(element, as: styled[index], source: source, lineRange: range, storage: storage,
+                      font: font, base: base, columnWidth: columnWidth, lineHeight: lineHeight)
+                return range
+            }
         }
 
         private func continuation(for element: FountainElement, cues: [Int: String]) -> String? {
