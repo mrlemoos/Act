@@ -99,6 +99,7 @@ struct EditorPerformanceTests {
             samples.append(Self.milliseconds { _ = host.coordinator.textView(host.textView, doCommandBy: #selector(NSTextView.insertNewline(_:))) })
             host.document.undoManager?.endUndoGrouping()
         }
+        print("Return samples: \(samples) ms; median: \(Self.median(samples)) ms")
         #expect(Self.median(samples) < Self.returnLineBudget, "Return took \(samples.map { Int($0) }) ms")
     }
 

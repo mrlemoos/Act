@@ -210,6 +210,9 @@ struct ScreenplayEditor: NSViewRepresentable {
         func textViewDidChangeSelection(_ notification: Notification) {
             guard !isStyling, !isApplyingSource, let textView else { return }
             autocomplete.dismiss()
+            // AppKit moves the caret before textDidChange commits a line-break edit.
+            // That commit also updates typing attributes and the active line.
+            guard !editCrossesLines else { return }
             if lineStart(in: textView) != activeLineStart { format() } else { refreshTypingAttributes() }
         }
 
