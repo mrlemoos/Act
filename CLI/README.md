@@ -131,6 +131,10 @@ For source mutations, add `documentID` and `expectedRevision`. For shot/characte
 
 ## Development and validation
 
+The automation CLI runs on Effect 4. `Platform` owns local I/O and background launch; `Automation` owns endpoint recovery. Argument handling and transport return Effects with typed `CommandError` failures. The socket belongs to an Effect scope, which closes it on success, failure, timeout or interruption. The separate blocking generator keeps its existing runtime.
+
+`--timeout-ms` bounds the entire socket exchange, including a response arriving in fragments. A missing endpoint starts one background app process and waits up to the timeout for discovery. Only failures before submission can trigger that recovery. A lost reply or interruption after dispatch reports `uncertain_outcome` with the same request ID and never automatically replays the command. SIGINT and SIGTERM close CLI resources before returning one JSON error.
+
 ```sh
 cd CLI
 bun install --frozen-lockfile

@@ -1,5 +1,17 @@
 # Automation validation
 
+## Effect CLI rebuild, 27 November 2026
+
+The automation CLI now uses Effect 4 services for platform I/O and endpoint recovery, typed command failures, scoped socket ownership and Effect deadlines. Commands, version-1 wire fields, request IDs, JSON help, stdout results, exit codes and standalone Bun packaging remain compatible. The native service and blocking generator retain their existing implementations.
+
+- `bun run typecheck` in `CLI`: passed.
+- `bun test CLI/src`: 35 passed across three files, including 23 automation CLI cases. Real sockets and CLI subprocesses cover fragmented UTF-8, malformed and mismatched replies, structured server failures, private endpoint permissions, response limits, whole-exchange deadlines, socket cleanup on interruption, SIGTERM JSON output, startup recovery and no replay after a lost mutation reply. Startup publication is supplied through the platform service in the recovery test; actual native launch remains covered by process integration.
+- `zsh scripts/build-app.sh`: passed, compiling both helpers and packaging the local app bundle.
+- `bun CLI/integration.ts`: passed against the compiled Effect CLI and isolated native app, covering background launch, edits, request replay, save, relaunch, history, reversion, jobs and temporary installation with `/usr/bin:/bin` as PATH.
+- `bun CLI/contract.ts --check`, `node .galicia/check.ts` and `git diff --check`: passed. The generated wire schema is unchanged.
+
+Raw stdin requests now receive envelope validation before dispatch and stop reading above 4 MiB. Socket timeouts bound the complete exchange rather than resetting with each arriving chunk. Cancelling after dispatch closes CLI resources and reports an uncertain outcome without automatically repeating the command. No paid provider or installed-app replacement formed part of this rebuild. The earlier account and OS validation limits below still apply; the full Swift test suite was not rerun for this TypeScript change.
+
 Local implementation is delivered. This record distinguishes fixture tests, actual app-process behaviour and paid-provider evidence. Validation date: 23 November 2026.
 
 ## Automated checks
