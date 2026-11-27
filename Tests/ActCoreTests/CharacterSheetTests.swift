@@ -184,23 +184,30 @@ final class CharacterSheetTests: XCTestCase {
         let executable = try runtime("""
         #!/bin/sh
         /bin/sleep 60 &
-        echo $! > child.pid
+        echo $! > child.pid.tmp
+        /bin/mv child.pid.tmp child.pid
         wait
         """, directory: directory)
-        let job = Task { try await BackgroundCommand().run(executable: executable, arguments: [], directory: directory) }
         let childFile = directory.appendingPathComponent("child.pid")
+        let command = BackgroundCommand()
+        defer { command.cancel() }
+
+        let job = Task { try await command.run(executable: executable, arguments: [], directory: directory) }
         for _ in 0..<200 {
             if FileManager.default.fileExists(atPath: childFile.path) { break }
             try await Task.sleep(for: .milliseconds(10))
         }
         let child = try XCTUnwrap(Int32(String(contentsOf: childFile, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)))
         job.cancel()
-        do { _ = try await job.value; XCTFail("Expected cancellation") } catch { XCTAssertTrue(error is CancellationError) }
+        let result = await job.result
         // The descendant must not remain executable after cancellation. A brief zombie can await launchd reaping.
         for _ in 0..<100 {
             if kill(child, 0) != 0 { break }
             try await Task.sleep(for: .milliseconds(10))
         }
+
+        guard case .failure(let error) = result else { return XCTFail("Expected cancellation") }
+        XCTAssertTrue(error is CancellationError)
         XCTAssertNotEqual(kill(child, 0), 0)
     }
 
