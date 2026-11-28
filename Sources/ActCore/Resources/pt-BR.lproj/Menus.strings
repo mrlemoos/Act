@@ -22,3 +22,8 @@
 "Window" = "Janela";
 "Minimise" = "Minimizar";
 "Zoom" = "Zoom";
+"New Tab" = "Nova aba";
+"Show Previous Tab" = "Mostrar aba anterior";
+"Show Next Tab" = "Mostrar próxima aba";
+"Move Tab to New Window" = "Mover aba para nova janela";
+"Merge All Windows" = "Combinar todas as janelas";

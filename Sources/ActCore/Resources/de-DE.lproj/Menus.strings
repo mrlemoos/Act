@@ -22,3 +22,8 @@
 "Window" = "Fenster";
 "Minimise" = "Im Dock ablegen";
 "Zoom" = "Zoomen";
+"New Tab" = "Neuer Tab";
+"Show Previous Tab" = "Vorherigen Tab anzeigen";
+"Show Next Tab" = "Nächsten Tab anzeigen";
+"Move Tab to New Window" = "Tab in neues Fenster bewegen";
+"Merge All Windows" = "Alle Fenster zusammenführen";

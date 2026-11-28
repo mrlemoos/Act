@@ -22,3 +22,8 @@
 "Window" = "Fenêtre";
 "Minimise" = "Réduire";
 "Zoom" = "Zoom";
+"New Tab" = "Nouvel onglet";
+"Show Previous Tab" = "Afficher l’onglet précédent";
+"Show Next Tab" = "Afficher l’onglet suivant";
+"Move Tab to New Window" = "Déplacer l’onglet vers une nouvelle fenêtre";
+"Merge All Windows" = "Fusionner toutes les fenêtres";

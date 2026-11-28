@@ -119,6 +119,7 @@ final class ActApplicationDelegate: NSObject, NSApplicationDelegate, NSMenuItemV
         file.addItem(withTitle: L10n.string("New", table: "Menus"), action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "n").target = documents
         file.addItem(withTitle: L10n.string("New Project", table: "Menus"), action: #selector(newProject(_:)), keyEquivalent: "N").target = self
         file.addItem(withTitle: L10n.string("Open…", table: "Menus"), action: #selector(NSDocumentController.openDocument(_:)), keyEquivalent: "o").target = documents
+        file.addItem(withTitle: L10n.string("New Tab", table: "Menus"), action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "t").target = documents
         file.addItem(.separator())
         file.addItem(withTitle: L10n.string("Close", table: "Menus"), action: #selector(closeCurrentDocument(_:)), keyEquivalent: "w").target = self
         file.addItem(withTitle: L10n.string("Save", table: "Menus"), action: #selector(saveCurrentDocument(_:)), keyEquivalent: "s").target = self
@@ -144,6 +145,11 @@ final class ActApplicationDelegate: NSObject, NSApplicationDelegate, NSMenuItemV
         let window = NSMenu(title: L10n.string("Window", table: "Menus"))
         window.addItem(withTitle: L10n.string("Minimise", table: "Menus"), action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
         window.addItem(withTitle: L10n.string("Zoom", table: "Menus"), action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
+        window.addItem(.separator())
+        window.addItem(withTitle: L10n.string("Show Previous Tab", table: "Menus"), action: #selector(NSWindow.selectPreviousTab(_:)), keyEquivalent: "\t").keyEquivalentModifierMask = [.control, .shift]
+        window.addItem(withTitle: L10n.string("Show Next Tab", table: "Menus"), action: #selector(NSWindow.selectNextTab(_:)), keyEquivalent: "\t").keyEquivalentModifierMask = [.control]
+        window.addItem(withTitle: L10n.string("Move Tab to New Window", table: "Menus"), action: #selector(NSWindow.moveTabToNewWindow(_:)), keyEquivalent: "")
+        window.addItem(withTitle: L10n.string("Merge All Windows", table: "Menus"), action: #selector(NSWindow.mergeAllWindows(_:)), keyEquivalent: "")
         menu.addItem(withTitle: L10n.string("Window", table: "Menus"), action: nil, keyEquivalent: "").submenu = window
         NSApp.windowsMenu = window
         return menu

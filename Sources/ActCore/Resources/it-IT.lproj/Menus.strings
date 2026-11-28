@@ -22,3 +22,8 @@
 "Window" = "Finestra";
 "Minimise" = "Contrai";
 "Zoom" = "Zoom";
+"New Tab" = "Nuovo pannello";
+"Show Previous Tab" = "Mostra pannello precedente";
+"Show Next Tab" = "Mostra pannello successivo";
+"Move Tab to New Window" = "Sposta pannello in una nuova finestra";
+"Merge All Windows" = "Unisci tutte le finestre";

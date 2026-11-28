@@ -78,6 +78,7 @@ final class FountainDocument: NSDocument, ObservableObject {
     func attachProjectBoard(_ board: ProjectBoardDocument) {
         projectBoard = board
         board.workspaceHost = self
+        windowControllers.forEach { $0.synchronizeWindowTitleWithDocumentName() }
         requestedWorkspace = .board
     }
 
@@ -238,6 +239,8 @@ final class FountainDocument: NSDocument, ObservableObject {
         let view = WorkspaceView(document: self)
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1280, height: 900), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
         window.title = displayName
+        window.tabbingIdentifier = "ActWorkspace"
+        window.tabbingMode = .preferred
         window.titlebarAppearsTransparent = true
         window.toolbarStyle = .unified
         window.minSize = NSSize(width: 820, height: 580)
@@ -474,6 +477,30 @@ final class ActDocumentController: NSDocumentController {
 
 @MainActor
 final class ActWindowController: NSWindowController, NSWindowDelegate {
+    override func windowTitle(forDocumentDisplayName displayName: String) -> String {
+        if let document = document as? FountainDocument,
+           document.fileURL == nil, document.source.isEmpty,
+           let board = document.projectBoard {
+            return board.displayName
+        }
+        return displayName
+    }
+
+    override func showWindow(_ sender: Any?) {
+        let target = NSApp.orderedWindows.first {
+            $0 !== window && $0.isVisible && $0.windowController is ActWindowController
+        }
+        super.showWindow(sender)
+        if let window, let target, !(target.tabbedWindows ?? []).contains(window) {
+            target.addTabbedWindow(window, ordered: .above)
+        }
+        window?.makeKeyAndOrderFront(sender)
+    }
+
+    override func newWindowForTab(_ sender: Any?) {
+        (NSApp.delegate as? ActApplicationDelegate)?.documents.newDocument(sender)
+    }
+
     func windowWillReturnUndoManager(_ window: NSWindow) -> UndoManager? {
         (document as? FountainDocument)?.workspaceUndoManager
     }

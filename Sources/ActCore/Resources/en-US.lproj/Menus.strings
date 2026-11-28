@@ -22,3 +22,8 @@
 "Window" = "Window";
 "Minimise" = "Minimize";
 "Zoom" = "Zoom";
+"New Tab" = "New Tab";
+"Show Previous Tab" = "Show Previous Tab";
+"Show Next Tab" = "Show Next Tab";
+"Move Tab to New Window" = "Move Tab to New Window";
+"Merge All Windows" = "Merge All Windows";

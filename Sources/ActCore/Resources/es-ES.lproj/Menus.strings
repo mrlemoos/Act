@@ -22,3 +22,8 @@
 "Window" = "Ventana";
 "Minimise" = "Minimizar";
 "Zoom" = "Zoom";
+"New Tab" = "Nueva pestaña";
+"Show Previous Tab" = "Mostrar pestaña anterior";
+"Show Next Tab" = "Mostrar pestaña siguiente";
+"Move Tab to New Window" = "Mover pestaña a una ventana nueva";
+"Merge All Windows" = "Fusionar todas las ventanas";

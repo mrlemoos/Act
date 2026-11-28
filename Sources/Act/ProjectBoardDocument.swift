@@ -15,6 +15,13 @@ final class ProjectBoardDocument: NSDocument, ObservableObject {
     @Published private(set) var saveFailed = false
     weak var workspaceHost: FountainDocument?
     private var baseline: DocumentFileSnapshot?
+    override var fileURL: URL? {
+        didSet {
+            MainActor.assumeIsolated {
+                workspaceHost?.windowControllers.forEach { $0.synchronizeWindowTitleWithDocumentName() }
+            }
+        }
+    }
     override class var autosavesInPlace: Bool { true }
     override init() { super.init(); hasUndoManager = true }
 
@@ -176,12 +183,12 @@ final class ProjectBoardDocument: NSDocument, ObservableObject {
         if let workspaceHost { workspaceHost.requestedWorkspace = .board; return }
         let controller = NSDocumentController.shared
         let active = NSApp.keyWindow?.windowController?.document as? FountainDocument
-        let existing = active ?? controller.documents.compactMap { $0 as? FountainDocument }.first { !$0.windowControllers.isEmpty }
-        let host = existing ?? FountainDocument()
-        if let previous = host.projectBoard, previous !== self {
-            guard previous.confirmTermination() else { close(); return }
-            previous.close()
+        // A second project must not replace the board belonging to another tab.
+        let existing = active.flatMap { document in
+            document.projectBoard == nil && document.fileURL == nil && !document.isDocumentEdited && document.source.isEmpty
+                ? document : nil
         }
+        let host = existing ?? FountainDocument()
         if existing == nil {
             host.fileType = UTType.fountain.identifier
             controller.addDocument(host)
